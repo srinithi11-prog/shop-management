@@ -322,11 +322,11 @@ app.post("/create-bill-multi", (req, res) => {
                 );
 
                 const newQty = b.remaining_quantity - quantity;
-                if (newQty <= 0) {
-                  db.query("DELETE FROM product_batches WHERE batch_id=?", [batch_id]);
-                } else {
-                  db.query("UPDATE product_batches SET remaining_quantity=? WHERE batch_id=?", [newQty, batch_id]);
-                }
+if (newQty <= 0) {
+  db.query("UPDATE product_batches SET remaining_quantity=0 WHERE batch_id=?", [batch_id]);
+} else {
+  db.query("UPDATE product_batches SET remaining_quantity=? WHERE batch_id=?", [newQty, batch_id]);
+}
 
                 processed++;
                 if (processed === items.length) {
