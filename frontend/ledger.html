@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Customer Ledger</title>
+  <style>
+    body { font-family: Arial; background: #f4f6f9; }
+    .container { width: 80%; margin: auto; padding: 20px; }
+    .card { background: white; padding: 20px; margin: 20px 0; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    table { width: 100%; border-collapse: collapse; }
+    th { background: #007bff; color: white; }
+    th, td { padding: 8px; border: 1px solid #ddd; text-align: center; }
+    button { padding: 8px 12px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; }
+    button:hover { background: #0056b3; }
+    input, select { padding: 6px; margin: 5px; }
+    .balance-box { font-size: 18px; font-weight: bold; margin-top: 10px; color: #333; }
+    .credit-row td { color: #dc3545; }
+    .debit-row td { color: #28a745; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+
+  <h1>📒 Customer Ledger</h1>
+  <a href="customers.html">⬅ Back to Customers</a>
+
+  <div class="card">
+    <h3>Select Customer</h3>
+    <select id="customerSelect"></select>
+    <button onclick="loadLedger()">Load Ledger</button>
+  </div>
+
+  <div class="card">
+    <h3>Add Transaction</h3>
+    <select id="txnType">
+      <option value="CREDIT">CREDIT (Customer took goods / owes money)</option>
+      <option value="DEBIT">DEBIT (Customer paid)</option>
+    </select>
+    <input type="number" id="txnAmount" placeholder="Amount">
+    <button onclick="addTransaction()">Add</button>
+  </div>
+
+  <div class="card">
+    <h3>Ledger</h3>
+    <table id="ledgerTable">
+      <tr>
+        <th>#</th>
+        <th>Date</th>
+        <th>Type</th>
+        <th>Amount</th>
+      </tr>
+    </table>
+    <div class="balance-box" id="balanceBox"></div>
+  </div>
+
+</div>
+
+<script>
+const API = `${window.location.protocol}//${window.location.hostname}:3000`;
+
+// Auto-load customer from URL param (when coming from customers.html)
+function getUrlParam(key) {
+  return new URLSearchParams(window.location.search).get(key);
+}
+
+function loadCustomers(callback) {
+  fetch(API + "/customers")
+    .then(res => res.json())
+    .then(data => {
+      const sel = document.getElementById("customerSelect");
+      sel.innerHTML = "";
+      data.forEach(c => {
+        sel.innerHTML += `<option value="${c.customer_id}">${c.name} (Balance: ₹${c.balance || 0})</option>`;
+      });
+
+      if (callback) callback();
+    });
+}
+
+function loadLedger() {
+  const customer_id = document.getElementById("customerSelect").value;
+  if (!customer_id) return;
+
+  fetch(API + "/ledger/" + customer_id)
+    .then(res => res.json())
+    .then(data => {
+      const table = document.getElementById("ledgerTable");
+      table.innerHTML = `
+        <tr>
+          <th>#</th>
+          <th>Date</th>
+          <th>Type</th>
+          <th>Amount</th>
+        </tr>`;
+
+      data.forEach((t, i) => {
+        // FIX: format date cleanly
+        const date = new Date(t.txn_date).toLocaleDateString();
+        const rowClass = t.txn_type === "CREDIT" ? "credit-row" : "debit-row";
+
+        table.innerHTML += `
+          <tr class="${rowClass}">
+            <td>${i + 1}</td>
+            <td>${date}</td>
+            <td>${t.txn_type}</td>
+            <td>₹${parseFloat(t.amount).toFixed(2)}</td>
+          </tr>`;
+      });
+
+      // FIX: use /customer/:id instead of fetching all customers
+      fetch(API + "/customer/" + customer_id)
+        .then(res => res.json())
+        .then(c => {
+          document.getElementById("balanceBox").innerText =
+            "Current Balance: ₹" + (c ? parseFloat(c.balance).toFixed(2) : "0.00");
+        });
+    });
+}
+
+// FIX: correct endpoint /transactions (POST)
+function addTransaction() {
+  const customer_id = document.getElementById("customerSelect").value;
+  const txn_type = document.getElementById("txnType").value;
+  const amount = document.getElementById("txnAmount").value;
+
+  if (!amount || parseFloat(amount) <= 0) {
+    alert("Enter a valid amount");
+    return;
+  }
+
+  fetch(API + "/transactions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ customer_id, txn_type, amount: parseFloat(amount) })
+  })
+  .then(() => {
+    document.getElementById("txnAmount").value = "";
+    loadCustomers(() => {
+      document.getElementById("customerSelect").value = customer_id;
+      loadLedger();
+    });
+  });
+}
+
+// Init
+loadCustomers(() => {
+  const paramId = getUrlParam("id");
+  if (paramId) {
+    document.getElementById("customerSelect").value = paramId;
+    loadLedger();
+  }
+});
+</script>
+
+</body>
+</html>

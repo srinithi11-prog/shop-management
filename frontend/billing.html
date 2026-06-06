@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Billing</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:Arial,sans-serif;background:#f0f4f8;}
+    .topbar{background:#007bff;color:white;padding:14px 24px;display:flex;justify-content:space-between;align-items:center;}
+    .topbar h1{font-size:20px;}
+    .nav{background:white;display:flex;gap:8px;padding:10px 20px;box-shadow:0 2px 6px rgba(0,0,0,0.08);flex-wrap:wrap;}
+    .nav a{text-decoration:none;background:#007bff;color:white;padding:7px 14px;border-radius:6px;font-size:13px;position:relative;}
+    .nav a:hover,.nav a.active{background:#0056b3;}
+    .key-hint{position:absolute;top:-6px;right:-4px;background:#ff9800;color:white;font-size:9px;padding:1px 4px;border-radius:3px;font-weight:bold;}
+    .container{padding:18px 24px;max-width:1100px;margin:auto;}
+    .card{background:white;padding:18px;border-radius:10px;margin-bottom:16px;box-shadow:0 2px 8px rgba(0,0,0,0.08);}
+    label{font-size:13px;color:#555;font-weight:bold;display:block;margin-bottom:3px;}
+    select,input{padding:7px 9px;border:1px solid #ccc;border-radius:5px;font-size:13px;outline:none;width:100%;}
+    select:focus,input:focus{border-color:#007bff;}
+    button{background:#007bff;color:white;border:none;padding:8px 16px;border-radius:5px;cursor:pointer;font-size:13px;font-weight:bold;}
+    button:hover{background:#0056b3;}
+    button.danger{background:#dc3545;}button.danger:hover{background:#a71d2a;}
+    button.success{background:#28a745;}button.success:hover{background:#1a6e30;}
+    button.warn{background:#fd7e14;}button.warn:hover{background:#c96a00;}
+    button.purple{background:#6f42c1;}button.purple:hover{background:#5a32a3;}
+    .row{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:10px;}
+    .f{display:flex;flex-direction:column;gap:3px;}
+    table.bill-tbl{width:100%;border-collapse:collapse;margin-top:8px;}
+    table.bill-tbl th{background:#007bff;color:white;padding:8px 6px;font-size:12px;text-align:center;}
+    table.bill-tbl td{padding:4px;border:1px solid #eee;text-align:center;font-size:12px;vertical-align:middle;}
+    table.bill-tbl td input,table.bill-tbl td select{padding:5px;font-size:12px;border:1px solid #ccc;border-radius:4px;width:100%;}
+    .grand-total{text-align:right;font-size:17px;font-weight:bold;color:#28a745;margin-top:10px;}
+    .walkin-box{background:#fff8e1;border:1px solid #ffc107;border-radius:7px;padding:10px;margin-top:8px;}
+    .dup-box{background:#fff3cd;border:1px solid #fd7e14;border-radius:7px;padding:10px;margin-top:8px;display:none;}
+    .reg-box{background:#e8f7ef;border:1px solid #28a745;border-radius:7px;padding:8px;margin-top:6px;}
+    table.alter-tbl{width:100%;border-collapse:collapse;margin-top:8px;}
+    table.alter-tbl th{background:#fd7e14;color:white;padding:7px;font-size:12px;text-align:center;}
+    table.alter-tbl td{padding:4px;border:1px solid #eee;text-align:center;font-size:12px;vertical-align:middle;}
+    table.alter-tbl td input{padding:5px;font-size:12px;border:1px solid #ccc;border-radius:4px;width:100%;}
+    .prod-drop{position:fixed;background:white;border:1px solid #aaa;border-radius:6px;max-height:200px;overflow-y:auto;z-index:99999;box-shadow:0 6px 20px rgba(0,0,0,0.2);display:none;min-width:240px;}
+    .prod-drop.open{display:block;}
+    .prod-drop-item{padding:9px 12px;cursor:pointer;border-bottom:1px solid #f0f0f0;}
+    .prod-drop-item:hover,.prod-drop-item.dp-active{background:#e8f0ff;}
+    .pdi-code{font-size:11px;color:#007bff;font-weight:bold;font-family:monospace;}
+    .pdi-name{font-size:13px;color:#222;}
+    .selected-tag{font-size:11px;color:#28a745;font-weight:bold;margin-top:2px;}
+    .cust-drop{position:absolute;top:100%;left:0;width:100%;background:white;border:1px solid #aaa;border-radius:6px;max-height:200px;overflow-y:auto;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,0.15);display:none;}
+    .cust-drop-item{padding:8px 12px;cursor:pointer;border-bottom:1px solid #f0f0f0;font-size:13px;}
+    .cust-drop-item:hover,.cust-drop-item.dp-active{background:#e8f0ff;}
+    @media print{@page{size:A4;margin:10mm;}body *{visibility:hidden;}#invoiceArea,#invoiceArea *{visibility:visible;}#invoiceArea{position:fixed;top:0;left:0;width:100%;}.no-print{display:none!important;}}
+    #invoiceArea{font-family:'Courier New',monospace;padding:20px;background:white;}
+    .ih{text-align:center;margin-bottom:8px;}.ih h2{font-size:22px;font-weight:bold;letter-spacing:2px;}.ih p{font-size:13px;margin:2px 0;}
+    .iline{border-top:2px solid #333;margin:6px 0;}
+    .imeta{display:flex;justify-content:space-between;margin:8px 0;font-size:13px;}
+    .itbl{width:100%;border-collapse:collapse;margin:8px 0;font-size:13px;}.itbl th,.itbl td{border:1px solid #333;padding:6px 8px;}.itbl th{text-align:center;font-weight:bold;}
+    .ifooter{font-size:13px;margin-top:5px;}.isign{text-align:right;margin-top:22px;font-size:13px;}
+  </style>
+</head>
+<body>
+<div class="topbar"><h1>🧾 Sales Billing</h1><span id="fyLabel" style="font-size:13px;opacity:0.85;"></span></div>
+<div class="nav">
+  <a href="index.html">🏠 Home<span class="key-hint">0</span></a>
+  <a href="billing.html" class="active">🧾 Billing<span class="key-hint">1</span></a>
+  <a href="quotation.html">📋 Quotation<span class="key-hint">2</span></a>
+  <a href="purchase-bill.html">📥 Purchase<span class="key-hint">3</span></a>
+  <a href="products.html">📦 Products<span class="key-hint">4</span></a>
+  <a href="customers.html">👤 Customers<span class="key-hint">5</span></a>
+  <a href="suppliers.html">🏭 Suppliers<span class="key-hint">6</span></a>
+  <a href="expenses.html">💸 Expenses<span class="key-hint">7</span></a>
+  <a href="reports.html">📊 Reports<span class="key-hint">8</span></a>
+  <a href="retrieve-bill.html">🔍 Find Bill<span class="key-hint">9</span></a>
+</div>
+
+<div class="container">
+  <div class="card">
+    <h2 style="margin-bottom:14px;color:#007bff;">Create Sales Bill</h2>
+    <div class="row">
+      <div class="f" style="width:140px;"><label>Payment</label>
+        <select id="paymentType" onchange="onPaymentChange()">
+          <option value="Cash">Cash</option><option value="UPI">UPI</option><option value="CREDIT">Credit</option>
+        </select>
+      </div>
+      <div class="f" style="width:160px;"><label>Date</label>
+        <select id="dateOption" onchange="toggleDateInput()"><option value="today">Today</option><option value="custom">Custom Date</option></select>
+      </div>
+      <div class="f" id="customDateBox" style="display:none;width:150px;"><label>Select Date</label><input type="date" id="customDate"></div>
+      <div class="f" id="todayBox"><label>&nbsp;</label><span id="todayLabel" style="padding:7px 10px;background:#f0f4f8;border-radius:5px;font-size:13px;display:block;"></span></div>
+    </div>
+
+    <div class="row" style="margin-bottom:4px;">
+      <div class="f" style="flex:1;"><label>Regular Customer (type to search)</label>
+        <div style="position:relative;">
+          <input id="custSearch" placeholder="Type name to search..." oninput="searchCustomers()" onkeydown="custDropKey(event)" autocomplete="off" style="width:100%;">
+          <div class="cust-drop" id="custDrop"></div>
+        </div>
+        <div id="custSelected" style="font-size:12px;color:#28a745;margin-top:3px;"></div>
+        <input type="hidden" id="custId">
+        <button onclick="clearCustomer()" id="clearCustBtn" style="display:none;margin-top:3px;padding:3px 10px;font-size:12px;background:#888;width:auto;">✕ Clear</button>
+      </div>
+    </div>
+
+    <div class="walkin-box" id="walkinBox">
+      <p style="font-size:12px;color:#856404;font-weight:bold;margin-bottom:8px;">📝 Walk-in Customer</p>
+      <div class="row">
+        <div class="f"><label>Name *</label><input id="walkinName" placeholder="Customer name" oninput="checkDup()"></div>
+        <div class="f"><label>Phone</label><input id="walkinPhone" placeholder="Optional"></div>
+      </div>
+      <!-- Duplicate warning -->
+      <div class="dup-box" id="dupBox">
+        <b style="color:#856404;">⚠️ Similar customer found:</b>
+        <div id="dupList" style="margin:6px 0;font-size:13px;"></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="success" onclick="useExisting()" style="font-size:12px;padding:5px 12px;">✅ Same Person — Use Existing</button>
+          <button onclick="dismissDup()" style="font-size:12px;padding:5px 12px;background:#888;">Different Person</button>
+        </div>
+      </div>
+      <!-- Save as regular -->
+      <div class="reg-box" id="regBox">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:normal;font-size:13px;">
+          <input type="checkbox" id="saveRegular" style="width:auto;">
+          <span>Save as <b>Regular Customer</b> (shows in dropdown for future bills)</span>
+        </label>
+        <p style="font-size:11px;color:#666;margin-top:3px;">Credit customers are always saved automatically</p>
+      </div>
+    </div>
+
+    <div style="overflow-x:auto;margin-top:12px;">
+      <table class="bill-tbl">
+        <thead><tr>
+          <th style="width:32px;">#</th><th style="width:105px;">Code</th>
+          <th style="width:165px;">Name</th><th style="width:160px;">Price/Batch</th>
+          <th style="width:58px;">Qty</th><th style="width:80px;">Rate ₹</th>
+          <th style="width:88px;">Amount ₹</th><th style="width:36px;" class="no-print">✕</th>
+        </tr></thead>
+        <tbody id="billBody"></tbody>
+      </table>
+    </div>
+    <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
+      <button onclick="addRow()">➕ Add Row</button>
+      <button class="success" onclick="submitBill()">✅ Create Bill</button>
+    </div>
+    <div class="grand-total" id="grandTotal">Grand Total: ₹0.00</div>
+  </div>
+
+  <div class="card" id="invoiceCard" style="display:none;">
+    <div class="no-print" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+      <h2 style="color:#28a745;">✅ Bill Created</h2>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="warn" onclick="window.print()">🖨️ Print</button>
+        <button class="purple" id="sharePdfBtn" onclick="sharePDF()">📤 Share PDF</button>
+        <button class="warn" onclick="showAlterSection()">✏️ Alter Bill</button>
+        <button onclick="newBill()">➕ New Bill</button>
+      </div>
+    </div>
+    <div id="invoiceArea"></div>
+    <div id="alterSection" style="display:none;margin-top:16px;border-top:2px solid #eee;padding-top:14px;" class="no-print">
+      <h4 style="color:#fd7e14;margin-bottom:10px;">✏️ Alter Bill</h4>
+      <div style="overflow-x:auto;">
+        <table class="alter-tbl">
+          <thead><tr><th>#</th><th>Code</th><th>Name</th><th>Batch</th><th>Qty</th><th>Rate ₹</th><th>Amount ₹</th><th>Del</th></tr></thead>
+          <tbody id="alterBody"></tbody>
+        </table>
+      </div>
+      <div style="margin-top:10px;display:flex;gap:8px;">
+        <button onclick="addAlterRow()" style="background:#fd7e14;">➕ Add Item</button>
+        <button class="success" onclick="saveAlter()">💾 Save</button>
+        <button onclick="hideAlterSection()">Cancel</button>
+      </div>
+      <div style="text-align:right;font-size:16px;font-weight:bold;color:#fd7e14;margin-top:8px;" id="alterTotal"></div>
+    </div>
+  </div>
+</div>
+<div class="prod-drop" id="prodDrop"></div>
+
+<script>
+const API=`${window.location.protocol}//${window.location.hostname}:3000`;
+const SHOP="SUN CERAMIC",PHONE="9942607766";
+if(!sessionStorage.getItem("loggedIn"))window.location.href="login.html";
+
+let rowCount=0,allProducts=[],allRegular=[],currentBill=null;
+let alterRowCount=0,deletedAlterIds=[];
+let activeInput=null,activeRow=null,dropIdx=-1,custIdx=-1;
+let dupMatches=[];
+
+window.addEventListener("DOMContentLoaded",()=>{
+  document.getElementById("todayLabel").innerText=new Date().toLocaleDateString("en-IN",{weekday:"short",year:"numeric",month:"short",day:"numeric"});
+  document.getElementById("customDate").value=new Date().toISOString().split("T")[0];
+  fetch(API+"/active-year").then(r=>r.json()).then(fy=>{if(fy)document.getElementById("fyLabel").innerText="FY: "+fy.year_label;}).catch(()=>{});
+  fetch(API+"/products").then(r=>r.json()).then(d=>{allProducts=d;addRow();}).catch(()=>addRow());
+  loadRegular();
+  document.addEventListener("mousedown",e=>{
+    const pd=document.getElementById("prodDrop");
+    if(pd&&!pd.contains(e.target)&&e.target!==activeInput)hideProdDrop();
+    const cd=document.getElementById("custDrop");
+    if(cd&&!cd.contains(e.target)&&e.target!==document.getElementById("custSearch"))cd.style.display="none";
+  });
+});
+
+function toggleDateInput(){const c=document.getElementById("dateOption").value==="custom";document.getElementById("customDateBox").style.display=c?"flex":"none";document.getElementById("todayBox").style.display=c?"none":"flex";}
+function onPaymentChange(){if(document.getElementById("paymentType").value==="CREDIT"&&!document.getElementById("custId").value){document.getElementById("saveRegular").checked=true;document.getElementById("saveRegular").disabled=true;}else{document.getElementById("saveRegular").disabled=false;}}
+
+function loadRegular(){fetch(API+"/regular-customers").then(r=>r.json()).then(d=>{allRegular=d;});}
+
+function searchCustomers(){
+  const q=document.getElementById("custSearch").value.trim().toLowerCase();
+  const drop=document.getElementById("custDrop");custIdx=-1;
+  if(q.length<1){drop.style.display="none";return;}
+  const matches=allRegular.filter(c=>c.name.toLowerCase().includes(q)||(c.phone||"").includes(q)).slice(0,10);
+  if(!matches.length){drop.style.display="none";return;}
+  drop.innerHTML=matches.map((c,i)=>`
+    <div class="cust-drop-item" id="cdi_${i}"
+      onmousedown="pickCustomer(${c.customer_id},'${esc(c.name)}','${c.phone||""}',${parseFloat(c.balance)||0})">
+      <b>${c.name}</b>${c.phone?" | "+c.phone:""}
+      ${parseFloat(c.balance)>0?`<span style="color:#dc3545;font-size:11px;"> Due:₹${parseFloat(c.balance).toFixed(2)}</span>`:""}
+    </div>`).join("");
+  drop.style.display="block";
+}
+function custDropKey(e){
+  const drop=document.getElementById("custDrop");const items=drop.querySelectorAll(".cust-drop-item");
+  if(!items.length||drop.style.display==="none")return;
+  if(e.key==="ArrowDown"){e.preventDefault();custIdx=Math.min(custIdx+1,items.length-1);hlC(items);return;}
+  if(e.key==="ArrowUp"){e.preventDefault();custIdx=Math.max(custIdx-1,0);hlC(items);return;}
+  if(e.key==="Enter"&&custIdx>=0){e.preventDefault();items[custIdx].dispatchEvent(new MouseEvent("mousedown",{bubbles:true}));return;}
+  if(e.key==="Escape"){drop.style.display="none";custIdx=-1;}
+}
+function hlC(items){items.forEach((el,i)=>el.classList.toggle("dp-active",i===custIdx));if(items[custIdx])items[custIdx].scrollIntoView({block:"nearest"});}
+function pickCustomer(id,name,phone,due){
+  document.getElementById("custId").value=id;document.getElementById("custSearch").value=name;
+  document.getElementById("custSelected").innerText="✅ "+name+(phone?" | "+phone:"")+(due>0?" | Due:₹"+due.toFixed(2):"");
+  document.getElementById("custDrop").style.display="none";document.getElementById("clearCustBtn").style.display="inline-block";
+  document.getElementById("walkinBox").style.display="none";custIdx=-1;
+}
+function clearCustomer(){
+  document.getElementById("custId").value="";document.getElementById("custSearch").value="";
+  document.getElementById("custSelected").innerText="";document.getElementById("clearCustBtn").style.display="none";
+  document.getElementById("walkinBox").style.display="block";
+}
+
+// Duplicate check
+let dupTimer=null;
+function checkDup(){
+  const name=document.getElementById("walkinName").value.trim();
+  clearTimeout(dupTimer);
+  if(name.length<2){document.getElementById("dupBox").style.display="none";return;}
+  dupTimer=setTimeout(()=>{
+    fetch(API+"/check-customer-name?name="+encodeURIComponent(name)).then(r=>r.json()).then(matches=>{
+      if(!matches.length){document.getElementById("dupBox").style.display="none";return;}
+      dupMatches=matches;
+      document.getElementById("dupList").innerHTML=matches.map(c=>`<div style="padding:3px 0;"><b>${c.name}</b>${c.phone?" | "+c.phone:""}${parseFloat(c.balance)>0?" | Due:₹"+parseFloat(c.balance).toFixed(2):""}</div>`).join("");
+      document.getElementById("dupBox").style.display="block";
+    });
+  },500);
+}
+function useExisting(){if(!dupMatches.length)return;const c=dupMatches[0];pickCustomer(c.customer_id,c.name,c.phone||"",parseFloat(c.balance)||0);document.getElementById("dupBox").style.display="none";}
+function dismissDup(){document.getElementById("dupBox").style.display="none";}
+
+// Product dropdown
+function showProdDrop(inputEl,rowId,fieldType,ctx){
+  activeInput=inputEl;activeRow=rowId;dropIdx=-1;
+  const q=inputEl.value.trim().toLowerCase();
+  const drop=document.getElementById("prodDrop");
+  if(q.length<1){hideProdDrop();return;}
+  const matches=(fieldType==="code"?allProducts.filter(p=>(p.product_code||"").toLowerCase().includes(q)):allProducts.filter(p=>p.name.toLowerCase().includes(q))).slice(0,10);
+  if(!matches.length){hideProdDrop();return;}
+  drop.innerHTML=matches.map((p,i)=>`
+    <div class="prod-drop-item" id="pdrop_${i}" onmousedown="pickProduct(event,${p.product_id},'${esc(p.name)}','${esc(p.product_code||"")}','${ctx}')">
+      <div class="pdi-code">${p.product_code||"(no code)"}</div>
+      <div class="pdi-name">${p.name}${p.brand?" — "+p.brand:""}</div>
+    </div>`).join("");
+  const rect=inputEl.getBoundingClientRect();
+  drop.style.top=(rect.bottom+2)+"px";drop.style.left=rect.left+"px";drop.style.width=Math.max(rect.width,240)+"px";
+  drop.classList.add("open");
+}
+function hideProdDrop(){document.getElementById("prodDrop").classList.remove("open");dropIdx=-1;activeInput=null;}
+function handleProdKey(e,rowId,fieldType,ctx){
+  const drop=document.getElementById("prodDrop");const isOpen=drop.classList.contains("open");const items=drop.querySelectorAll(".prod-drop-item");
+  if(e.key==="ArrowDown"){e.preventDefault();if(!isOpen)showProdDrop(e.target,rowId,fieldType,ctx);dropIdx=Math.min(dropIdx+1,items.length-1);items.forEach((el,i)=>el.classList.toggle("dp-active",i===dropIdx));if(items[dropIdx])items[dropIdx].scrollIntoView({block:"nearest"});return;}
+  if(e.key==="ArrowUp"){e.preventDefault();dropIdx=Math.max(dropIdx-1,0);items.forEach((el,i)=>el.classList.toggle("dp-active",i===dropIdx));if(items[dropIdx])items[dropIdx].scrollIntoView({block:"nearest"});return;}
+  if(e.key==="Enter"){if(isOpen&&dropIdx>=0&&items[dropIdx]){e.preventDefault();items[dropIdx].dispatchEvent(new MouseEvent("mousedown",{bubbles:true}));return;}if(isOpen&&items.length===1){e.preventDefault();items[0].dispatchEvent(new MouseEvent("mousedown",{bubbles:true}));return;}e.preventDefault();const qEl=document.getElementById((ctx==="alter"?"ar":"")+"qty_"+rowId);if(qEl)qEl.focus();return;}
+  if(e.key==="Escape")hideProdDrop();if(e.key==="Tab")hideProdDrop();
+}
+function pickProduct(e,pid,name,code,ctx){
+  e.preventDefault();const id=activeRow||0;
+  if(ctx==="alter"){document.getElementById("arcode_"+id).value=code;document.getElementById("arname_"+id).value=name;document.getElementById("arpid_"+id).value=pid;document.getElementById("artag_"+id).innerText="✅ "+name;hideProdDrop();loadBatches("arbatch_"+id,pid);}
+  else{document.getElementById("pcode_"+id).value=code;document.getElementById("pname_"+id).value=name;document.getElementById("ppid_"+id).value=pid;document.getElementById("ptag_"+id).innerText="✅ "+name;hideProdDrop();loadBatches("batch_"+id,pid);}
+  setTimeout(()=>{const q=document.getElementById((ctx==="alter"?"ar":"")+"qty_"+id);if(q)q.focus();},50);
+}
+function loadBatches(selId,pid){
+  const sel=document.getElementById(selId);if(!sel)return;
+  sel.innerHTML=`<option value="">Loading...</option>`;
+  fetch(API+"/batches/"+pid).then(r=>r.json()).then(batches=>{
+    if(!batches.length){sel.innerHTML=`<option value="">No stock</option>`;return;}
+    sel.innerHTML=`<option value="">— Select price —</option>`;
+    batches.forEach(b=>{sel.innerHTML+=`<option value="${b.batch_id}" data-mrp="${b.mrp}">₹${parseFloat(b.mrp).toFixed(2)} | Stk:${b.remaining_quantity}</option>`;});
+  });
+}
+function esc(s){return (s||"").replace(/'/g,"\\'").replace(/"/g,'\\"');}
+
+// Bill rows
+function addRow(){
+  rowCount++;const id=rowCount;
+  const tr=document.createElement("tr");tr.id="billrow_"+id;
+  tr.innerHTML=`<td>${id}</td>
+    <td><input id="pcode_${id}" placeholder="Code" oninput="showProdDrop(this,${id},'code','create')" onfocus="showProdDrop(this,${id},'code','create')" onkeydown="handleProdKey(event,${id},'code','create')" autocomplete="off"></td>
+    <td><input id="pname_${id}" placeholder="Name" oninput="showProdDrop(this,${id},'name','create')" onfocus="showProdDrop(this,${id},'name','create')" onkeydown="handleProdKey(event,${id},'name','create')" autocomplete="off">
+    <div class="selected-tag" id="ptag_${id}"></div><input type="hidden" id="ppid_${id}"></td>
+    <td><select id="batch_${id}" onchange="onBC(${id})" onkeydown="if(event.key==='Enter'){event.preventDefault();document.getElementById('qty_'+${id}).focus();}"><option value="">Select product first</option></select></td>
+    <td><input type="number" id="qty_${id}" value="1" min="1" oninput="calcRow(${id})" onkeydown="if(event.key==='Enter'){event.preventDefault();document.getElementById('rate_'+${id}).focus();}"></td>
+    <td><input type="number" id="rate_${id}" placeholder="0.00" oninput="calcRow(${id})" onkeydown="if(event.key==='Enter'){event.preventDefault();document.getElementById('amt_'+${id}).focus();}"></td>
+    <td><input type="number" id="amt_${id}" placeholder="0.00" oninput="calcGT()" onkeydown="if(event.key==='Enter'){event.preventDefault();addRow();}"></td>
+    <td><button class="danger" onclick="delRow(${id})" style="padding:3px 7px;font-size:11px;">✕</button></td>`;
+  document.getElementById("billBody").appendChild(tr);
+  document.getElementById("pcode_"+id).focus();
+}
+function onBC(id){const sel=document.getElementById("batch_"+id);const opt=sel.options[sel.selectedIndex];if(!opt||!opt.dataset.mrp)return;document.getElementById("rate_"+id).value=parseFloat(opt.dataset.mrp).toFixed(2);calcRow(id);}
+function calcRow(id){const q=parseFloat(document.getElementById("qty_"+id).value)||0;const r=parseFloat(document.getElementById("rate_"+id).value)||0;document.getElementById("amt_"+id).value=(q*r).toFixed(2);calcGT();}
+function delRow(id){const el=document.getElementById("billrow_"+id);if(el)el.remove();calcGT();}
+function calcGT(){let t=0;for(let i=1;i<=rowCount;i++){const el=document.getElementById("amt_"+i);if(el)t+=parseFloat(el.value)||0;}document.getElementById("grandTotal").innerText="Grand Total: ₹"+t.toFixed(2);}
+function getBillDate(){if(document.getElementById("dateOption").value==="custom"){const d=document.getElementById("customDate").value;if(!d){alert("Select a date");return null;}return d;}return new Date().toISOString().split("T")[0];}
+
+async function submitBill(){
+  const payment_mode=document.getElementById("paymentType").value;
+  const bill_date=getBillDate();if(!bill_date)return;
+  const customer_id=document.getElementById("custId").value;
+  const items=[];
+  for(let i=1;i<=rowCount;i++){
+    const bEl=document.getElementById("batch_"+i);const qEl=document.getElementById("qty_"+i);const rEl=document.getElementById("rate_"+i);const aEl=document.getElementById("amt_"+i);const pEl=document.getElementById("ppid_"+i);
+    if(!document.getElementById("billrow_"+i)||!bEl||!bEl.value)continue;
+    const qty=parseInt(qEl.value)||1;const rate=parseFloat(rEl.value)||0;
+    if(qty<=0||rate<=0)continue;
+    items.push({product_id:pEl.value,batch_id:bEl.value,quantity:qty,rate,total_amount:parseFloat(aEl.value)||rate*qty});
+  }
+  if(!items.length){alert("Add at least one item with product and price selected");return;}
+  const body={items,payment_mode,customer_id:customer_id||null,bill_date};
+  if(!customer_id){
+    const wname=document.getElementById("walkinName").value.trim();
+    if(!wname){alert("Enter customer name");return;}
+    body.walkin_name=wname;body.walkin_phone=document.getElementById("walkinPhone").value.trim();
+    body.save_as_regular=document.getElementById("saveRegular").checked||(payment_mode==="CREDIT");
+  }
+  fetch(API+"/create-bill-multi",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)})
+  .then(r=>r.json()).then(d=>{
+    if(d.error){alert("Error: "+d.error);return;}
+    if(!customer_id&&body.save_as_regular&&d.customer_id){
+      fetch(API+"/mark-regular/"+d.customer_id,{method:"POST"}).catch(()=>{});
+    }
+    loadRegular();showInvoice(d.bill_id);
+  }).catch(err=>alert("Error: "+err.message));
+}
+
+function showInvoice(bill_id){
+  fetch(API+"/bill/"+bill_id).then(r=>r.json()).then(b=>{
+    currentBill=b;buildInvoice(b,"invoiceArea");buildAlterRows(b);
+    document.getElementById("alterSection").style.display="none";
+    document.getElementById("invoiceCard").style.display="block";
+    document.getElementById("invoiceCard").scrollIntoView({behavior:"smooth"});
+  });
+}
+
+function buildInvoice(b,targetId){
+  const dateStr=new Date(b.bill_date).toLocaleDateString("en-IN");
+  const custName=b.customer&&b.customer!=="Walk-in"?b.customer:(b.walkin_name||"Walk-in");
+  const phone=b.phone||"";const total=parseFloat(b.total||0);
+  function w(n){const a=["","One","Two","Three","Four","Five","Six","Seven","Eight","Nine","Ten","Eleven","Twelve","Thirteen","Fourteen","Fifteen","Sixteen","Seventeen","Eighteen","Nineteen"];const t=["","","Twenty","Thirty","Forty","Fifty","Sixty","Seventy","Eighty","Ninety"];n=Math.round(n);if(n===0)return "Zero";if(n<20)return a[n];if(n<100)return t[Math.floor(n/10)]+(n%10?" "+a[n%10]:"");if(n<1000)return a[Math.floor(n/100)]+" Hundred"+(n%100?" "+w(n%100):"");if(n<100000)return w(Math.floor(n/1000))+" Thousand"+(n%1000?" "+w(n%1000):"");if(n<10000000)return w(Math.floor(n/100000))+" Lakh"+(n%100000?" "+w(n%100000):"");return w(Math.floor(n/10000000))+" Crore"+(n%10000000?" "+w(n%10000000):"");}
+  const amtWords=w(Math.round(total))+" Rupees Only";
+  let rows="",totalQty=0;
+  b.items.forEach((item,i)=>{totalQty+=parseInt(item.quantity);rows+=`<tr><td style="text-align:center;">${i+1}</td><td style="text-align:left;">${item.product||item.product_name||"-"}</td><td style="text-align:center;">${item.quantity}</td><td style="text-align:right;">${parseFloat(item.rate||item.selling_price||0).toFixed(2)}</td><td style="text-align:right;">${parseFloat(item.total_amount||0).toFixed(2)}</td></tr>`;});
+  for(let i=b.items.length;i<8;i++)rows+=`<tr><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>`;
+  document.getElementById(targetId).innerHTML=`
+    <div class="ih"><h2>${SHOP}</h2><p>CELL: ${PHONE}</p><p style="font-weight:bold;margin-top:5px;font-size:15px;">Q BILL</p></div>
+    <div class="iline"></div>
+    <div class="imeta"><div><b>${custName}</b>${phone?"<br>"+phone:""}${b.address?"<br>"+b.address:""}</div>
+    <div style="text-align:right;"><b>Payment : ${b.payment_mode||"-"}</b><br><b>Date : ${dateStr}</b><br><b>Q No : ${b.bill_no}</b></div></div>
+    <div class="iline"></div>
+    <table class="itbl"><thead><tr><th style="width:40px;">S.No</th><th style="text-align:left;">Description</th><th style="width:60px;">Qty</th><th style="width:75px;text-align:right;">Rate</th><th style="width:85px;text-align:right;">Amount</th></tr></thead>
+    <tbody>${rows}</tbody>
+    <tfoot><tr><td colspan="2" style="font-weight:bold;text-align:left;">Total</td><td style="text-align:center;">${totalQty}</td><td></td><td style="text-align:right;font-weight:bold;">${total.toFixed(2)}</td></tr></tfoot></table>
+    <div class="ifooter"><div style="display:flex;justify-content:space-between;padding:3px 0;"><span>E. &amp; O.E.</span><span>${total.toFixed(2)}</span></div>
+    <div class="iline" style="border-color:#555;"></div>
+    <div style="display:flex;justify-content:space-between;padding:3px 0;"><span><i>${amtWords}</i></span><span><b>Net Amount : ${total.toFixed(2)}</b></span></div></div>
+    <div class="isign"><p>For ${SHOP}</p><br><br><p>Authorised Signatory</p></div>`;
+}
+
+async function sharePDF(){
+  const btn=document.getElementById("sharePdfBtn");const orig=btn.innerText;btn.innerText="⏳...";btn.disabled=true;
+  try{const {jsPDF}=window.jspdf;const canvas=await html2canvas(document.getElementById("invoiceArea"),{scale:2,backgroundColor:"#ffffff"});
+  const pdf=new jsPDF({orientation:"portrait",unit:"mm",format:"a4"});const pw=pdf.internal.pageSize.getWidth()-20;
+  pdf.addImage(canvas.toDataURL("image/png"),"PNG",10,10,pw,(canvas.height*pw)/canvas.width);
+  const fname="Q-Bill-"+(currentBill?currentBill.bill_no:"bill")+".pdf";
+  if(navigator.share){const blob=pdf.output("blob");const file=new File([blob],fname,{type:"application/pdf"});try{await navigator.share({files:[file],title:"Q Bill",text:"Bill from "+SHOP});btn.innerText=orig;btn.disabled=false;return;}catch(ex){}}
+  pdf.save(fname);}catch(e){alert("PDF error: "+e.message);}
+  btn.innerText=orig;btn.disabled=false;
+}
+
+// Alter Bill
+function buildAlterRows(b){document.getElementById("alterBody").innerHTML="";alterRowCount=0;deletedAlterIds=[];b.items.forEach(item=>addAR(item));}
+function addAR(item){
+  alterRowCount++;const id=alterRowCount;
+  const tr=document.createElement("tr");tr.id="arow_"+id;
+  tr.innerHTML=`<td>${id}</td>
+    <td><input id="arcode_${id}" value="${esc(item.product_code||"")}" placeholder="Code" oninput="showProdDrop(this,${id},'code','alter')" onfocus="showProdDrop(this,${id},'code','alter')" onkeydown="handleProdKey(event,${id},'code','alter')" autocomplete="off"></td>
+    <td><input id="arname_${id}" value="${esc(item.product||item.product_name||"")}" placeholder="Name" oninput="showProdDrop(this,${id},'name','alter')" onfocus="showProdDrop(this,${id},'name','alter')" onkeydown="handleProdKey(event,${id},'name','alter')" autocomplete="off">
+    <div class="selected-tag" id="artag_${id}">${(item.product||item.product_name)?"✅ "+(item.product||item.product_name):""}</div>
+    <input type="hidden" id="arpid_${id}" value="${item.product_id||""}"><input type="hidden" id="ariid_${id}" value="${item.item_id||"new"}"></td>
+    <td><select id="arbatch_${id}" onchange="onAB(${id})" onkeydown="if(event.key==='Enter'){event.preventDefault();document.getElementById('arqty_'+${id}).focus();}"><option value="${item.batch_id||""}">${item.batch_id?"Current batch":"No batch"}</option></select></td>
+    <td><input type="number" id="arqty_${id}" value="${item.quantity}" min="1" oninput="calcAR(${id})" onkeydown="if(event.key==='Enter'){event.preventDefault();document.getElementById('arrate_'+${id}).focus();}"></td>
+    <td><input type="number" id="arrate_${id}" value="${parseFloat(item.rate||item.selling_price||0).toFixed(2)}" oninput="calcAR(${id})" onkeydown="if(event.key==='Enter'){event.preventDefault();document.getElementById('aramt_'+${id}).focus();}"></td>
+    <td><input type="number" id="aramt_${id}" value="${parseFloat(item.total_amount||0).toFixed(2)}" oninput="calcAT()"></td>
+    <td><button class="danger" onclick="delAR(${id},'${item.item_id||'new'}')" style="padding:3px 7px;font-size:11px;">✕</button></td>`;
+  document.getElementById("alterBody").appendChild(tr);
+  if(item.product_id)loadBatches("arbatch_"+id,item.product_id);
+  calcAT();
+}
+function addAlterRow(){addAR({product_id:"",product:"",product_code:"",batch_id:"",quantity:1,rate:0,total_amount:0,item_id:"new"});}
+function onAB(id){const sel=document.getElementById("arbatch_"+id);const opt=sel.options[sel.selectedIndex];if(!opt||!opt.dataset.mrp)return;document.getElementById("arrate_"+id).value=parseFloat(opt.dataset.mrp).toFixed(2);calcAR(id);}
+function calcAR(id){const q=parseFloat(document.getElementById("arqty_"+id).value)||0;const r=parseFloat(document.getElementById("arrate_"+id).value)||0;document.getElementById("aramt_"+id).value=(q*r).toFixed(2);calcAT();}
+function delAR(id,iid){if(iid&&iid!=="new")deletedAlterIds.push(iid);const el=document.getElementById("arow_"+id);if(el)el.remove();calcAT();}
+function calcAT(){let t=0;for(let i=1;i<=alterRowCount;i++){const el=document.getElementById("aramt_"+i);if(el)t+=parseFloat(el.value)||0;}document.getElementById("alterTotal").innerText="New Total: ₹"+t.toFixed(2);}
+function showAlterSection(){document.getElementById("alterSection").style.display="block";document.getElementById("alterSection").scrollIntoView({behavior:"smooth"});}
+function hideAlterSection(){document.getElementById("alterSection").style.display="none";}
+function saveAlter(){
+  const items=[];
+  for(let i=1;i<=alterRowCount;i++){const row=document.getElementById("arow_"+i);if(!row)continue;const iid=document.getElementById("ariid_"+i).value;const pid=document.getElementById("arpid_"+i).value;const bid=document.getElementById("arbatch_"+i).value;const qty=parseInt(document.getElementById("arqty_"+i).value)||0;const rate=parseFloat(document.getElementById("arrate_"+i).value)||0;const amt=parseFloat(document.getElementById("aramt_"+i).value)||0;if(qty<=0||rate<=0)continue;items.push({item_id:iid,product_id:pid||null,batch_id:bid||null,quantity:qty,rate,total_amount:amt});}
+  if(!items.length){alert("Add at least one item");return;}
+  fetch(API+"/alter-bill/"+currentBill.bill_no,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({items,deleted_item_ids:deletedAlterIds})})
+  .then(r=>r.json()).then(d=>{if(d.error){alert("Error: "+d.error);return;}alert("✅ Bill updated! New total: ₹"+d.new_total.toFixed(2));deletedAlterIds=[];showInvoice(currentBill.bill_no);});
+}
+
+function newBill(){
+  document.getElementById("billBody").innerHTML="";document.getElementById("invoiceCard").style.display="none";
+  clearCustomer();document.getElementById("paymentType").value="Cash";document.getElementById("walkinBox").style.display="block";
+  document.getElementById("walkinName").value="";document.getElementById("walkinPhone").value="";
+  document.getElementById("saveRegular").checked=false;document.getElementById("saveRegular").disabled=false;
+  document.getElementById("dupBox").style.display="none";document.getElementById("grandTotal").innerText="Grand Total: ₹0.00";
+  rowCount=0;currentBill=null;addRow();loadRegular();window.scrollTo({top:0,behavior:"smooth"});
+}
+
+document.addEventListener("keydown",e=>{
+  if(e.ctrlKey&&e.key==="F10"){e.preventDefault();return;}
+  if(e.key==="Escape"){window.location.href="index.html";return;}
+  const tag=document.activeElement?document.activeElement.tagName:"";
+  if(tag==="INPUT"||tag==="TEXTAREA"||tag==="SELECT")return;
+  const p={"0":"index.html","1":"billing.html","2":"quotation.html","3":"purchase-bill.html","4":"products.html","5":"customers.html","6":"suppliers.html","7":"expenses.html","8":"reports.html","9":"retrieve-bill.html"};
+  if(p[e.key]){e.preventDefault();window.location.href=p[e.key];}
+});
+</script>
+</body>
+</html>

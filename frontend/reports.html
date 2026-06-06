@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Reports - Shop Manager</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:Arial,sans-serif;background:#f0f4f8;}
+    .topbar{background:#007bff;color:white;padding:14px 24px;}
+    .topbar h1{font-size:20px;}
+    .nav{background:white;display:flex;gap:8px;padding:10px 20px;box-shadow:0 2px 6px rgba(0,0,0,0.08);flex-wrap:wrap;}
+    .nav a{text-decoration:none;background:#007bff;color:white;padding:7px 14px;border-radius:6px;font-size:13px;position:relative;}
+    .nav a:hover,.nav a.active{background:#0056b3;}
+    .key-hint{position:absolute;top:-6px;right:-4px;background:#ff9800;color:white;font-size:9px;padding:1px 4px;border-radius:3px;font-weight:bold;}
+    .container{padding:18px 24px;}
+    .card{background:white;padding:18px;border-radius:10px;margin-bottom:16px;box-shadow:0 2px 8px rgba(0,0,0,0.08);}
+    label{font-size:13px;color:#555;font-weight:bold;display:block;margin-bottom:3px;}
+    input,select{padding:7px 9px;border:1px solid #ccc;border-radius:5px;font-size:13px;outline:none;}
+    input:focus{border-color:#007bff;}
+    button{background:#007bff;color:white;border:none;padding:8px 16px;border-radius:5px;cursor:pointer;font-size:13px;font-weight:bold;}
+    button:hover{background:#0056b3;}
+    .row{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:10px;}
+    .f{display:flex;flex-direction:column;gap:3px;}
+    table{width:100%;border-collapse:collapse;}
+    th{background:#007bff;color:white;padding:8px;font-size:13px;}
+    td{padding:7px;border:1px solid #eee;font-size:13px;text-align:center;}
+    .summary-cards{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px;}
+    .scard{background:#f8f9fa;border-radius:8px;padding:12px 16px;text-align:center;flex:1;min-width:130px;}
+    .scard h4{font-size:11px;color:#888;margin-bottom:5px;text-transform:uppercase;}
+    .scard h2{font-size:19px;font-weight:bold;}
+    .scard.blue h2{color:#007bff;}
+    .scard.green h2{color:#28a745;}
+    .scard.red h2{color:#dc3545;}
+    .scard.purple h2{color:#6f42c1;}
+    .scard.orange h2{color:#fd7e14;}
+    .hidden-profit{display:none;}
+    .profit-locked-msg{background:#f8f9fa;border-radius:8px;padding:14px;text-align:center;color:#aaa;font-size:14px;border:1px dashed #ddd;}
+    .unlock-hint{font-size:11px;color:#ccc;text-align:right;margin-top:6px;user-select:none;}
+  </style>
+</head>
+<body>
+<div class="topbar"><h1>📊 Reports</h1></div>
+<div class="nav">
+  <a href="index.html">🏠 Home<span class="key-hint">0</span></a>
+  <a href="billing.html">🧾 Billing<span class="key-hint">1</span></a>
+  <a href="quotation.html">📋 Quotation<span class="key-hint">2</span></a>
+  <a href="purchase-bill.html">📥 Purchase<span class="key-hint">3</span></a>
+  <a href="products.html">📦 Products<span class="key-hint">4</span></a>
+  <a href="customers.html">👤 Customers<span class="key-hint">5</span></a>
+  <a href="suppliers.html">🏭 Suppliers<span class="key-hint">6</span></a>
+  <a href="expenses.html">💸 Expenses<span class="key-hint">7</span></a>
+  <a href="reports.html" class="active">📊 Reports<span class="key-hint">8</span></a>
+  <a href="retrieve-bill.html">🔍 Find Bill<span class="key-hint">9</span></a>
+</div>
+
+<div class="container">
+
+  <!-- ── SALES BY DATE (always visible) ── -->
+  <div class="card">
+    <h3 style="margin-bottom:12px;">📅 Sales by Date</h3>
+    <div class="row">
+      <div class="f"><label>Select Date</label><input type="date" id="salesDate"></div>
+      <div class="f"><label>&nbsp;</label><button onclick="loadSalesByDate()">View</button></div>
+    </div>
+    <div id="salesByDateResult"></div>
+  </div>
+
+  <!-- ── MONTHLY SALES ── -->
+  <div class="card">
+    <h3 style="margin-bottom:12px;">📈 Monthly Report</h3>
+    <div class="row">
+      <div class="f"><label>Year</label><input type="number" id="monthlyYear" style="width:100px;"></div>
+      <div class="f"><label>&nbsp;</label><button onclick="loadMonthly()">View</button></div>
+    </div>
+    <div class="summary-cards" id="monthlySummaryCards"></div>
+    <canvas id="monthlyChart" height="80"></canvas>
+    <!-- Profit table — hidden -->
+    <div class="hidden-profit" id="monthlyProfitTable" style="margin-top:14px;">
+      <h4 style="margin-bottom:8px;color:#28a745;">💰 Monthly Profit Breakdown</h4>
+      <div style="overflow-x:auto;">
+        <table>
+          <thead><tr>
+            <th>Month</th>
+            <th>Sales ₹</th>
+            <th>Gross Profit ₹</th>
+            <th>Expenses ₹</th>
+            <th>Net Profit ₹</th>
+          </tr></thead>
+          <tbody id="monthlyProfitBody"></tbody>
+          <tfoot id="monthlyProfitFoot"></tfoot>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── YEARLY PROFIT — hidden ── -->
+  <div class="card hidden-profit" id="yearlySection">
+    <h3 style="margin-bottom:12px;">🗓️ Yearly Profit</h3>
+    <div class="row">
+      <div class="f"><label>Year</label><input type="number" id="yearlyYear" style="width:100px;"></div>
+      <div class="f"><label>&nbsp;</label><button onclick="loadYearly()">View</button></div>
+    </div>
+    <div class="summary-cards" id="yearlySummary"></div>
+  </div>
+
+  <!-- ── PROFIT BY BRAND — hidden ── -->
+  <div class="card hidden-profit" id="brandSection">
+    <h3 style="margin-bottom:12px;">📦 Profit by Brand</h3>
+    <div class="row">
+      <div class="f"><label>From Date</label><input type="date" id="brandFrom" style="width:160px;"></div>
+      <div class="f"><label>To Date</label><input type="date" id="brandTo" style="width:160px;"></div>
+      <div class="f"><label>&nbsp;</label><button onclick="loadBrandProfit()">Filter</button></div>
+      <div class="f"><label>&nbsp;</label><button onclick="clearBrandFilter()" style="background:#888;">All Time</button></div>
+    </div>
+    <div id="brandDateLabel" style="font-size:12px;color:#888;margin-bottom:8px;"></div>
+    <div style="overflow-x:auto;">
+      <table>
+        <thead><tr>
+          <th style="text-align:left;">Brand</th>
+          <th>Qty Sold</th>
+          <th>Sales ₹</th>
+          <th>Gross Profit ₹</th>
+          <th>Bills</th>
+          <th>Stock Units</th>
+          <th>Stock Worth ₹<br><span style="font-size:10px;font-weight:normal;">(at purchase price)</span></th>
+        </tr></thead>
+        <tbody id="brandProfitBody"></tbody>
+        <tfoot id="brandProfitFoot"></tfoot>
+      </table>
+    </div>
+  </div>
+
+  <!-- Placeholder shown to employees -->
+  <div class="card" id="profitLockedMsg">
+    <div class="profit-locked-msg">📊 Profit reports are restricted &nbsp;—&nbsp; </div>
+  </div>
+
+  <!-- ── TOP PRODUCTS (always visible) ── -->
+  <div class="card">
+    <h3 style="margin-bottom:12px;">🏆 Top Products</h3>
+    <table>
+      <thead><tr><th>#</th><th>Product</th><th>Qty Sold</th></tr></thead>
+      <tbody id="topProdBody"></tbody>
+    </table>
+  </div>
+
+  <!-- ── LOW STOCK (always visible) ── -->
+  <div class="card">
+    <h3 style="margin-bottom:12px;">⚠️ Low Stock Alert</h3>
+    <table>
+      <thead><tr><th>Product</th><th>Brand</th><th>Stock</th><th>Min</th></tr></thead>
+      <tbody id="lowStockBody"></tbody>
+    </table>
+  </div>
+
+  <!-- ── FINANCIAL YEARS (always visible) ── -->
+  <div class="card">
+    <h3 style="margin-bottom:12px;">📆 Financial Years</h3>
+    <div class="row">
+      <div class="f"><label>Label</label><input id="fyLabelInput" placeholder="2026-2027" style="width:120px;"></div>
+      <div class="f"><label>Start</label><input type="date" id="fyStart" style="width:150px;"></div>
+      <div class="f"><label>End</label><input type="date" id="fyEnd" style="width:150px;"></div>
+      <div class="f"><label>&nbsp;</label><button onclick="createFY()">Create</button></div>
+    </div>
+    <div id="fyList" style="margin-top:10px;overflow-x:auto;"></div>
+  </div>
+
+  
+</div>
+
+<script>
+const API = `${window.location.protocol}//${window.location.hostname}:3000`;
+if(!sessionStorage.getItem("loggedIn")) window.location.href = "login.html";
+
+const now = new Date();
+document.getElementById("salesDate").value = now.toISOString().split("T")[0];
+document.getElementById("monthlyYear").value = now.getFullYear();
+document.getElementById("yearlyYear").value = now.getFullYear();
+document.getElementById("fyStart").value = now.getFullYear()+"-04-01";
+document.getElementById("fyEnd").value = (now.getFullYear()+1)+"-03-31";
+document.getElementById("fyLabelInput").value = now.getFullYear()+"-"+(now.getFullYear()+1);
+
+// Brand filter — default to current month
+const bfrom = document.getElementById("brandFrom");
+const bto = document.getElementById("brandTo");
+bfrom.value = now.getFullYear()+"-"+String(now.getMonth()+1).padStart(2,"0")+"-01";
+bto.value = now.toISOString().split("T")[0];
+
+let profitUnlocked = false;
+let monthlyData = [];
+let monthlyChart = null;
+
+// ── SALES BY DATE ──────────────────────────────────────
+function loadSalesByDate(){
+  const date = document.getElementById("salesDate").value;
+  if(!date){alert("Select a date");return;}
+  fetch(API+"/sales-by-date?date="+date).then(r=>r.json()).then(d=>{
+    const div = document.getElementById("salesByDateResult");
+    if(!d.bills||!d.bills.length){
+      div.innerHTML="<p style='color:#888;margin-top:8px;'>No sales on this date</p>";return;
+    }
+
+    // Build table — profit column hidden until unlock
+    const profitStyle = profitUnlocked?"":"display:none;";
+    let rows = d.bills.map(b=>`<tr>
+      <td>Q-${b.bill_id}</td>
+      <td style="text-align:left;">${b.customer_name}</td>
+      <td>${b.payment_mode||"-"}</td>
+      <td>₹${parseFloat(b.grand_total).toFixed(2)}</td>
+      <td class="hidden-profit" style="${profitStyle}color:${parseFloat(b.bill_profit||0)>=0?"#28a745":"#dc3545"};font-weight:bold;">
+        ₹${parseFloat(b.bill_profit||0).toFixed(2)}
+      </td>
+    </tr>`).join("");
+
+    div.innerHTML=`
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin:10px 0;">
+        <div class="scard blue" style="flex:none;padding:8px 16px;">
+          <h4>Total Sales</h4><h2>₹${parseFloat(d.total||0).toFixed(2)}</h2>
+        </div>
+        ${profitUnlocked?`<div class="scard green" style="flex:none;padding:8px 16px;"><h4>Total Profit</h4><h2>₹${parseFloat(d.total_profit||0).toFixed(2)}</h2></div>`:""}
+      </div>
+      <table>
+        <thead><tr>
+          <th>Q No</th><th>Customer</th><th>Payment</th><th>Amount ₹</th>
+          <th class="hidden-profit" style="${profitStyle}">Profit ₹</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>`;
+  });
+}
+
+// ── MONTHLY ────────────────────────────────────────────
+function loadMonthly(){
+  const year = document.getElementById("monthlyYear").value;
+  fetch(API+"/monthly-profit?year="+year).then(r=>r.json()).then(data=>{
+    monthlyData = data;
+    renderMonthly();
+  });
+}
+
+function renderMonthly(){
+  const data = monthlyData;
+  if(!data.length){
+    document.getElementById("monthlySummaryCards").innerHTML="<p style='color:#888;'>No data for this year</p>";
+    return;
+  }
+  const totalSales = data.reduce((s,d)=>s+d.sales,0);
+  const totalGross = data.reduce((s,d)=>s+(d.gross_profit||0),0);
+  const totalExp = data.reduce((s,d)=>s+(d.expense||0),0);
+  const totalNet = data.reduce((s,d)=>s+(d.net_profit||0),0);
+
+  // Summary cards — sales always, profit hidden
+  document.getElementById("monthlySummaryCards").innerHTML=`
+    <div class="scard blue"><h4>Total Sales</h4><h2>₹${totalSales.toFixed(2)}</h2></div>
+    ${profitUnlocked?`
+    <div class="scard orange"><h4>Gross Profit</h4><h2>₹${totalGross.toFixed(2)}</h2></div>
+    <div class="scard red"><h4>Total Expenses</h4><h2>₹${totalExp.toFixed(2)}</h2></div>
+    <div class="scard green"><h4>Net Profit</h4><h2>₹${totalNet.toFixed(2)}</h2></div>
+    `:""}
+  `;
+
+  // Chart
+  const labels = data.map(d=>d.month_name);
+  const salesVals = data.map(d=>d.sales);
+  const datasets = [{label:"Sales ₹",data:salesVals,backgroundColor:"rgba(0,123,255,0.6)"}];
+  if(profitUnlocked){
+    datasets.push({label:"Gross Profit ₹",data:data.map(d=>d.gross_profit||0),backgroundColor:"rgba(253,126,20,0.6)"});
+    datasets.push({label:"Net Profit ₹",data:data.map(d=>d.net_profit||0),backgroundColor:"rgba(40,167,69,0.6)"});
+  }
+  if(monthlyChart) monthlyChart.destroy();
+  monthlyChart = new Chart(document.getElementById("monthlyChart"),{
+    type:"bar",
+    data:{labels,datasets},
+    options:{scales:{y:{beginAtZero:true}}}
+  });
+
+  // Profit table
+  if(profitUnlocked){
+    const tbody = document.getElementById("monthlyProfitBody");
+    const tfoot = document.getElementById("monthlyProfitFoot");
+    tbody.innerHTML = data.map(d=>`<tr>
+      <td>${d.month_name}</td>
+      <td style="color:#007bff;">₹${d.sales.toFixed(2)}</td>
+      <td style="color:#fd7e14;">₹${(d.gross_profit||0).toFixed(2)}</td>
+      <td style="color:#dc3545;">₹${(d.expense||0).toFixed(2)}</td>
+      <td style="font-weight:bold;color:${(d.net_profit||0)>=0?"#28a745":"#dc3545"};">₹${(d.net_profit||0).toFixed(2)}</td>
+    </tr>`).join("");
+    tfoot.innerHTML=`<tr style="background:#f0f4f8;font-weight:bold;">
+      <td>TOTAL</td>
+      <td>₹${totalSales.toFixed(2)}</td>
+      <td>₹${totalGross.toFixed(2)}</td>
+      <td>₹${totalExp.toFixed(2)}</td>
+      <td style="color:${totalNet>=0?"#28a745":"#dc3545"};">₹${totalNet.toFixed(2)}</td>
+    </tr>`;
+    document.getElementById("monthlyProfitTable").style.display="block";
+  }
+}
+
+// ── YEARLY ─────────────────────────────────────────────
+function loadYearly(){
+  const year = document.getElementById("yearlyYear").value;
+  fetch(API+"/yearly-profit?year="+year).then(r=>r.json()).then(d=>{
+    document.getElementById("yearlySummary").innerHTML=`
+      <div class="scard blue"><h4>Year ${d.year} Sales</h4><h2>₹${parseFloat(d.sales||0).toFixed(2)}</h2></div>
+      <div class="scard orange"><h4>Gross Profit</h4><h2>₹${parseFloat(d.gross_profit||0).toFixed(2)}</h2></div>
+      <div class="scard red"><h4>Total Expenses</h4><h2>₹${parseFloat(d.expense||0).toFixed(2)}</h2></div>
+      <div class="scard green"><h4>Net Profit</h4><h2>₹${parseFloat(d.net_profit||0).toFixed(2)}</h2></div>
+    `;
+  });
+}
+
+// ── PROFIT BY BRAND ────────────────────────────────────
+function loadBrandProfit(){
+  const from = document.getElementById("brandFrom").value;
+  const to = document.getElementById("brandTo").value;
+  let url = API+"/profit-by-brand";
+  const params = [];
+  if(from) params.push("from_date="+from);
+  if(to) params.push("to_date="+to);
+  if(params.length) url += "?"+params.join("&");
+
+  document.getElementById("brandDateLabel").innerText =
+    (from||to) ? "Showing: "+(from||"start")+" → "+(to||"today") : "Showing: All time";
+
+  fetch(url).then(r=>r.json()).then(data=>{
+    const tbody = document.getElementById("brandProfitBody");
+    const tfoot = document.getElementById("brandProfitFoot");
+    if(!data.length){
+      tbody.innerHTML=`<tr><td colspan="7" style="color:#888;">No brand data for this period</td></tr>`;
+      tfoot.innerHTML=""; return;
+    }
+    const totSales = data.reduce((s,b)=>s+parseFloat(b.total_sales||0),0);
+    const totProfit = data.reduce((s,b)=>s+parseFloat(b.total_profit||0),0);
+    const totStockWorth = data.reduce((s,b)=>s+parseFloat(b.stock_worth||0),0);
+
+    tbody.innerHTML = data.map(b=>{
+      const profit = parseFloat(b.total_profit||0);
+      return `<tr>
+        <td style="font-weight:bold;text-align:left;">${b.brand}</td>
+        <td>${b.qty_sold||0}</td>
+        <td>₹${parseFloat(b.total_sales||0).toFixed(2)}</td>
+        <td style="font-weight:bold;color:${profit>=0?"#28a745":"#dc3545"};">₹${profit.toFixed(2)}</td>
+        <td>${b.bill_count||0}</td>
+        <td>${b.total_stock||0}</td>
+        <td style="font-weight:bold;color:#6f42c1;">₹${parseFloat(b.stock_worth||0).toFixed(2)}</td>
+      </tr>`;
+    }).join("");
+    tfoot.innerHTML=`<tr style="background:#f0f4f8;font-weight:bold;">
+      <td style="text-align:left;">TOTAL</td><td>—</td>
+      <td>₹${totSales.toFixed(2)}</td>
+      <td style="color:${totProfit>=0?"#28a745":"#dc3545"};">₹${totProfit.toFixed(2)}</td>
+      <td>—</td><td>—</td>
+      <td style="color:#6f42c1;">₹${totStockWorth.toFixed(2)}</td>
+    </tr>`;
+  });
+}
+
+function clearBrandFilter(){
+  document.getElementById("brandFrom").value="";
+  document.getElementById("brandTo").value="";
+  loadBrandProfit();
+}
+
+// ── TOP PRODUCTS ───────────────────────────────────────
+fetch(API+"/top-products").then(r=>r.json()).then(data=>{
+  const tbody = document.getElementById("topProdBody");
+  if(!data.length){tbody.innerHTML=`<tr><td colspan="3" style="color:#888;">No data yet</td></tr>`;return;}
+  data.forEach((p,i)=>{ tbody.innerHTML+=`<tr><td>${i+1}</td><td style="text-align:left;">${p.name}</td><td>${p.qty}</td></tr>`; });
+}).catch(()=>{});
+
+// ── LOW STOCK ──────────────────────────────────────────
+fetch(API+"/low-stock").then(r=>r.json()).then(data=>{
+  const tbody = document.getElementById("lowStockBody");
+  if(!data.length){tbody.innerHTML=`<tr><td colspan="4" style="color:green;">✅ All stock OK</td></tr>`;return;}
+  data.forEach(p=>{ tbody.innerHTML+=`<tr>
+    <td style="text-align:left;">${p.product_name}</td>
+    <td>${p.brand||"-"}</td>
+    <td style="color:red;font-weight:bold;">${p.total_stock}</td>
+    <td>${p.min_stock}</td>
+  </tr>`; });
+}).catch(()=>{});
+
+// ── FINANCIAL YEARS ────────────────────────────────────
+function loadFYList(){
+  fetch(API+"/financial-years").then(r=>r.json()).then(data=>{
+    document.getElementById("fyList").innerHTML=`
+      <table><thead><tr><th>Year</th><th>Start</th><th>End</th><th>Status</th><th>Action</th></tr></thead>
+      <tbody>${data.map(fy=>`<tr>
+        <td>${fy.year_label}</td>
+        <td>${fy.start_date}</td>
+        <td>${fy.end_date}</td>
+        <td>${fy.is_active?'<span style="color:green;font-weight:bold;">Active</span>':'Inactive'}</td>
+        <td>${!fy.is_active?`<button onclick="setActiveFY(${fy.fy_id})" style="font-size:12px;padding:4px 10px;">Set Active</button>`:"-"}</td>
+      </tr>`).join("")}</tbody></table>`;
+  });
+}
+function createFY(){
+  const label=document.getElementById("fyLabelInput").value;
+  const start=document.getElementById("fyStart").value;
+  const end=document.getElementById("fyEnd").value;
+  if(!label||!start||!end){alert("Fill all fields");return;}
+  if(!confirm("Create "+label+" as active financial year?")) return;
+  fetch(API+"/financial-year",{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({year_label:label,start_date:start,end_date:end})})
+  .then(r=>r.json()).then(()=>{alert("✅ Created!");loadFYList();});
+}
+function setActiveFY(id){
+  if(!confirm("Switch to this financial year?")) return;
+  fetch(API+"/set-active-year",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({fy_id:id})})
+  .then(()=>loadFYList());
+}
+
+// ── PROFIT UNLOCK (Ctrl+F10) ───────────────────────────
+function askProfitPassword(){
+  const pwd=prompt("Enter profit password:");
+  if(pwd===null)return;
+  if(pwd==="3363"){revealProfit();}
+  else{alert("❌ Incorrect password");}
+}
+
+function revealProfit(){
+  if(profitUnlocked) return;
+  profitUnlocked = true;
+
+  // Show hidden sections
+  document.querySelectorAll(".hidden-profit").forEach(el=>{ el.style.display="block"; });
+  document.getElementById("profitLockedMsg").style.display="none";
+
+  // Re-render monthly with profit
+  if(monthlyData.length) renderMonthly();
+  else loadMonthly();
+
+  // Load yearly and brand
+  loadYearly();
+  loadBrandProfit();
+
+  // Re-run sales by date if already loaded
+  if(document.getElementById("salesByDateResult").innerHTML.trim()) loadSalesByDate();
+}
+
+// ── KEYBOARD NAV ───────────────────────────────────────
+document.addEventListener("keydown", e=>{
+  if(e.ctrlKey&&e.key==="F10"){e.preventDefault();askProfitPassword();return;}
+  if(e.key==="Escape"){window.location.href="index.html";return;}
+  const tag=document.activeElement?document.activeElement.tagName:"";
+  if(tag==="INPUT"||tag==="TEXTAREA"||tag==="SELECT") return;
+  const pages={"0":"index.html","1":"billing.html","2":"quotation.html","3":"purchase-bill.html","4":"products.html","5":"customers.html","6":"suppliers.html","7":"expenses.html","8":"reports.html","9":"retrieve-bill.html"};
+  if(pages[e.key]){e.preventDefault();window.location.href=pages[e.key];}
+});
+
+// ── INIT ───────────────────────────────────────────────
+loadSalesByDate();
+loadMonthly();
+loadFYList();
+</script>
+</body>
+</html>

@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Dashboard - Shop Manager</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:Arial,sans-serif;background:#f0f4f8;}
+    .topbar{background:#007bff;color:white;padding:14px 24px;display:flex;justify-content:space-between;align-items:center;}
+    .topbar h1{font-size:20px;}
+    .topbar span{font-size:13px;opacity:0.85;}
+    .logout{background:rgba(255,255,255,0.2);border:none;color:white;padding:5px 12px;border-radius:5px;cursor:pointer;font-size:13px;margin-left:10px;}
+    .logout:hover{background:rgba(255,255,255,0.35);}
+    .nav{background:white;display:flex;gap:8px;padding:10px 20px;box-shadow:0 2px 6px rgba(0,0,0,0.08);flex-wrap:wrap;}
+    .nav a{text-decoration:none;background:#007bff;color:white;padding:7px 14px;border-radius:6px;font-size:13px;position:relative;}
+    .nav a:hover,.nav a.active{background:#0056b3;}
+    .nav a .key-hint{position:absolute;top:-6px;right:-4px;background:#ff9800;color:white;font-size:9px;padding:1px 4px;border-radius:3px;font-weight:bold;}
+    .container{padding:18px 24px;}
+    .cards{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:18px;}
+    .card{flex:1;min-width:150px;background:white;padding:18px;border-radius:10px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,0.08);}
+    .card h4{font-size:11px;color:#888;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;}
+    .card h2{font-size:22px;font-weight:bold;}
+    .card.blue h2{color:#007bff;}
+    .card.green h2{color:#28a745;}
+    .card.red h2{color:#dc3545;}
+    .card.orange h2{color:#fd7e14;}
+    .card.purple h2{color:#6f42c1;}
+    .card.teal h2{color:#17a2b8;}
+    .section{background:white;padding:18px;margin-bottom:18px;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,0.08);}
+    .section h3{margin-bottom:12px;font-size:15px;color:#333;}
+    ul{list-style:none;padding:0;}
+    ul li{padding:6px 0;border-bottom:1px solid #f5f5f5;font-size:13px;color:#555;}
+    .hidden-profit{display:none;}
+    .unlock-hint{font-size:11px;color:#ccc;text-align:right;margin-top:4px;user-select:none;}
+    .kb-hint{font-size:11px;color:#aaa;text-align:center;margin-top:6px;padding:8px;background:white;border-radius:8px;}
+    .kb-hint kbd{background:#eee;padding:2px 6px;border-radius:3px;font-size:11px;border:1px solid #ccc;}
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1>🏪 Shop Manager</h1>
+  <div>
+    <span id="fyLabel"></span>
+    <span id="userLabel" style="margin-left:12px;"></span>
+    <button class="logout" onclick="logout()">Logout</button>
+  </div>
+</div>
+
+<div class="nav" id="mainNav">
+  <a href="index.html" class="active" data-key="0">🏠 Dashboard<span class="key-hint">0</span></a>
+  <a href="billing.html" data-key="1">🧾 Billing<span class="key-hint">1</span></a>
+  <a href="quotation.html" data-key="2">📋 Quotation<span class="key-hint">2</span></a>
+  <a href="purchase-bill.html" data-key="3">📥 Purchase<span class="key-hint">3</span></a>
+  <a href="products.html" data-key="4">📦 Products<span class="key-hint">4</span></a>
+  <a href="customers.html" data-key="5">👤 Customers<span class="key-hint">5</span></a>
+  <a href="suppliers.html" data-key="6">🏭 Suppliers<span class="key-hint">6</span></a>
+  <a href="expenses.html" data-key="7">💸 Expenses<span class="key-hint">7</span></a>
+  <a href="reports.html" data-key="8">📊 Reports<span class="key-hint">8</span></a>
+  <a href="retrieve-bill.html" data-key="9">🔍 Find Bill<span class="key-hint">9</span></a>
+</div>
+
+<div class="container">
+
+  <!-- Summary Cards -->
+  <div class="cards">
+    <div class="card blue">
+      <h4>Today's Sales</h4>
+      <h2 id="todaySales">₹0</h2>
+    </div>
+    <div class="card green">
+      <h4>Cash in Hand</h4>
+      <h2 id="cashToday">₹0</h2>
+    </div>
+    <div class="card teal">
+      <h4>UPI Today</h4>
+      <h2 id="upiToday">₹0</h2>
+    </div>
+    <div class="card orange">
+      <h4>Today's Expense</h4>
+      <h2 id="todayExpense">₹0</h2>
+    </div>
+    <!-- PROFIT CARDS — hidden until Ctrl+F10 -->
+    <div class="card green hidden-profit" id="cardTodayProfit">
+      <h4>Today's Profit</h4>
+      <h2 id="todayProfit">₹0</h2>
+    </div>
+    <div class="card purple hidden-profit" id="cardTotalProfit">
+      <h4>Overall Profit</h4>
+      <h2 id="totalProfit">₹0</h2>
+    </div>
+    <div class="card red hidden-profit" id="cardTotalExpense">
+      <h4>Total Expenses</h4>
+      <h2 id="totalExpense">₹0</h2>
+    </div>
+  </div>
+
+  <!-- Sales Graph -->
+  <div class="section">
+    <h3>📊 Sales — Last 30 Days</h3>
+    <canvas id="salesChart" height="70"></canvas>
+  </div>
+
+  <div style="display:flex;gap:16px;flex-wrap:wrap;">
+    <div class="section" style="flex:1;min-width:200px;">
+      <h3>🏆 Top Products</h3>
+      <ul id="topProducts"><li>Loading...</li></ul>
+    </div>
+    <div class="section" style="flex:1;min-width:200px;">
+      <h3>⚠️ Low Stock</h3>
+      <ul id="lowStock"><li>Loading...</li></ul>
+    </div>
+    <div class="section hidden-profit" id="sectionBrandProfit" style="flex:1;min-width:200px;">
+      <h3>📦 Profit by Brand</h3>
+      <ul id="brandProfit"><li>Loading...</li></ul>
+    </div>
+  </div>
+
+  <div class="kb-hint">
+    <kbd>0-9</kbd> Quick navigate &nbsp;|&nbsp;
+    <kbd>ESC</kbd> Dashboard &nbsp;|&nbsp;
+    <kbd>Tab</kbd> Next field &nbsp;|&nbsp;
+    <kbd>Enter</kbd> Confirm
+  </div>
+  
+</div>
+
+<script>
+const API = `${window.location.protocol}//${window.location.hostname}:3000`;
+if(!sessionStorage.getItem("loggedIn")) window.location.href = "login.html";
+
+document.getElementById("userLabel").innerText = "👤 " + (sessionStorage.getItem("username")||"");
+function logout(){ sessionStorage.clear(); window.location.href = "login.html"; }
+
+// Financial year
+fetch(API+"/active-year").then(r=>r.json()).then(fy=>{
+  if(fy) document.getElementById("fyLabel").innerHTML =
+    `<span style="background:rgba(255,255,255,0.2);padding:3px 10px;border-radius:12px;font-size:12px;">FY: ${fy.year_label}</span>`;
+}).catch(()=>{});
+
+// Today's sales
+fetch(API+"/sales-today").then(r=>r.json()).then(d=>{
+  document.getElementById("todaySales").innerText = "₹"+parseFloat(d.total||0).toFixed(2);
+}).catch(()=>{});
+
+// Cash in hand today
+fetch(API+"/cash-today").then(r=>r.json()).then(d=>{
+  document.getElementById("cashToday").innerText = "₹"+parseFloat(d.total||0).toFixed(2);
+}).catch(()=>{});
+
+// UPI today
+fetch(API+"/upi-today").then(r=>r.json()).then(d=>{
+  document.getElementById("upiToday").innerText = "₹"+parseFloat(d.total||0).toFixed(2);
+}).catch(()=>{});
+
+// Today expense (always visible)
+fetch(API+"/today-profit").then(r=>r.json()).then(d=>{
+  document.getElementById("todayExpense").innerText = "₹"+parseFloat(d.expense||0).toFixed(2);
+}).catch(()=>{});
+
+// Top products
+fetch(API+"/top-products").then(r=>r.json()).then(data=>{
+  const ul=document.getElementById("topProducts");
+  ul.innerHTML="";
+  if(!data.length){ul.innerHTML="<li>No data yet</li>";return;}
+  data.forEach((p,i)=>{ ul.innerHTML+=`<li>${i+1}. ${p.name} — ${p.qty} sold</li>`; });
+}).catch(()=>{});
+
+// Low stock
+fetch(API+"/stock-alert").then(r=>r.json()).then(data=>{
+  const ul=document.getElementById("lowStock");
+  ul.innerHTML="";
+  if(!data.length){ul.innerHTML='<li style="color:green;">✅ All stock OK</li>';return;}
+  data.forEach(p=>{ ul.innerHTML+=`<li>⚠️ ${p.product_name} — ${p.total_stock} left (min ${p.min_stock})</li>`; });
+}).catch(()=>{});
+
+// Sales graph
+fetch(API+"/sales-graph").then(r=>r.json()).then(data=>{
+  const labels=data.map(d=>d.date).reverse();
+  const values=data.map(d=>parseFloat(d.total)).reverse();
+  new Chart(document.getElementById("salesChart"),{
+    type:"line",
+    data:{labels,datasets:[{label:"Sales ₹",data:values,borderColor:"#007bff",backgroundColor:"rgba(0,123,255,0.07)",fill:true,tension:0.3,pointRadius:3}]},
+    options:{plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}}
+  });
+}).catch(()=>{});
+
+// ── PROFIT (hidden until Ctrl+F10) ────────────────────
+let profitLoaded = false;
+function loadProfitData(){
+  if(profitLoaded) return;
+  profitLoaded = true;
+  fetch(API+"/today-profit").then(r=>r.json()).then(d=>{
+    document.getElementById("todayProfit").innerText = "₹"+parseFloat(d.profit||0).toFixed(2);
+    document.getElementById("cardTodayProfit").querySelector("h2").style.color = parseFloat(d.profit||0)>=0?"#28a745":"#dc3545";
+  }).catch(()=>{});
+  fetch(API+"/profit").then(r=>r.json()).then(d=>{
+    document.getElementById("totalProfit").innerText = "₹"+parseFloat(d.profit||0).toFixed(2);
+    document.getElementById("totalExpense").innerText = "₹"+parseFloat(d.expense||0).toFixed(2);
+  }).catch(()=>{});
+  fetch(API+"/profit-by-brand").then(r=>r.json()).then(data=>{
+    const ul=document.getElementById("brandProfit");
+    ul.innerHTML="";
+    if(!data.length){ul.innerHTML="<li>No brand data yet</li>";return;}
+    data.forEach(b=>{
+      const profit=parseFloat(b.total_profit||0);
+      ul.innerHTML+=`<li><b>${b.brand}</b> — <span style="color:${profit>=0?"#28a745":"#dc3545"};font-weight:bold;">₹${profit.toFixed(2)}</span> <span style="color:#888;font-size:11px;">(${b.qty_sold} sold)</span></li>`;
+    });
+  }).catch(()=>{});
+}
+
+function askProfitPassword(){
+  const pwd=prompt("Enter profit password:");
+  if(pwd===null)return;
+  if(pwd==="1234"){revealProfit();}
+  else{alert("❌ Incorrect password");}
+}
+
+function revealProfit(){
+  document.querySelectorAll(".hidden-profit").forEach(el=>{
+    el.style.display = el.classList.contains("card") ? "flex" : "block";
+  });
+  loadProfitData();
+}
+
+// ── KEYBOARD NAVIGATION ───────────────────────────────
+document.addEventListener("keydown", e=>{
+  // Ctrl+F10 = unlock profit
+  if(e.ctrlKey && e.key==="F10"){ e.preventDefault(); revealProfit(); return; }
+
+  // ESC = dashboard (stays here)
+  if(e.key==="Escape"){ window.location.href="index.html"; return; }
+
+  // Number keys 0-9 = navigate to page (only when not typing in an input)
+  const tag = document.activeElement.tagName;
+  if(tag==="INPUT"||tag==="TEXTAREA"||tag==="SELECT") return;
+
+  const nav = {
+    "0":"index.html","1":"billing.html","2":"quotation.html",
+    "3":"purchase-bill.html","4":"products.html","5":"customers.html",
+    "6":"suppliers.html","7":"expenses.html","8":"reports.html","9":"retrieve-bill.html"
+  };
+  if(nav[e.key]){ e.preventDefault(); window.location.href=nav[e.key]; }
+});
+</script>
+</body>
+</html>

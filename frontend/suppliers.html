@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Suppliers</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:Arial,sans-serif;background:#f0f4f8;}
+    .topbar{background:#6f42c1;color:white;padding:14px 24px;}
+    .topbar h1{font-size:20px;}
+    .nav{background:white;display:flex;gap:8px;padding:10px 20px;box-shadow:0 2px 6px rgba(0,0,0,0.08);flex-wrap:wrap;}
+    .nav a{text-decoration:none;background:#007bff;color:white;padding:7px 14px;border-radius:6px;font-size:13px;position:relative;}
+    .nav a:hover,.nav a.active{background:#0056b3;}
+    .key-hint{position:absolute;top:-6px;right:-4px;background:#ff9800;color:white;font-size:9px;padding:1px 4px;border-radius:3px;font-weight:bold;}
+    .container{padding:18px 24px;max-width:1000px;}
+    .card{background:white;padding:18px;border-radius:10px;margin-bottom:16px;box-shadow:0 2px 8px rgba(0,0,0,0.08);}
+    label{font-size:13px;color:#555;font-weight:bold;display:block;margin-bottom:3px;}
+    input,select{padding:7px 9px;border:1px solid #ccc;border-radius:5px;font-size:13px;outline:none;width:100%;}
+    input:focus{border-color:#6f42c1;}
+    button{background:#6f42c1;color:white;border:none;padding:8px 16px;border-radius:5px;cursor:pointer;font-size:13px;font-weight:bold;}
+    button:hover{background:#5a32a3;}
+    button.danger{background:#dc3545;}button.danger:hover{background:#a71d2a;}
+    button.blue{background:#007bff;}button.blue:hover{background:#0056b3;}
+    button.success{background:#28a745;}button.success:hover{background:#1a6e30;}
+    button.warn{background:#fd7e14;}button.warn:hover{background:#c96a00;}
+    button.purple2{background:#20c997;}button.purple2:hover{background:#17a589;}
+    .row{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:10px;}
+    .f{display:flex;flex-direction:column;gap:3px;}
+    table{width:100%;border-collapse:collapse;}
+    th{background:#6f42c1;color:white;padding:8px;font-size:13px;}
+    td{padding:8px;border:1px solid #eee;font-size:13px;text-align:center;}
+    .badge-due{background:#fff3cd;color:#856404;padding:3px 10px;border-radius:10px;font-size:12px;font-weight:bold;}
+    .tab-btns{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;}
+    .tab-btn{background:#f0f0f0;color:#333;border:none;padding:7px 16px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:bold;}
+    .tab-btn.active{background:#6f42c1;color:white;}
+    .tab{display:none;}.tab.show{display:block;}
+    .modal-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.45);z-index:100;justify-content:center;align-items:flex-start;overflow-y:auto;padding:20px 10px;}
+    .modal-overlay.show{display:flex;}
+    .modal{background:white;padding:22px;border-radius:10px;width:760px;max-width:98%;margin:auto;}
+    .modal h3{color:#6f42c1;margin-bottom:14px;}
+    @media print{@page{size:A4;margin:10mm;}body *{visibility:hidden;}#stmtPrint,#stmtPrint *{visibility:visible;}#stmtPrint{position:fixed;top:0;left:0;width:100%;}.no-print{display:none!important;}}
+    #stmtPrint{font-family:'Courier New',monospace;padding:20px;display:none;}
+  </style>
+</head>
+<body>
+<div class="topbar"><h1>🏭 Suppliers</h1></div>
+<div class="nav">
+  <a href="index.html">🏠 Home<span class="key-hint">0</span></a>
+  <a href="billing.html">🧾 Billing<span class="key-hint">1</span></a>
+  <a href="quotation.html">📋 Quotation<span class="key-hint">2</span></a>
+  <a href="purchase-bill.html">📥 Purchase<span class="key-hint">3</span></a>
+  <a href="products.html">📦 Products<span class="key-hint">4</span></a>
+  <a href="customers.html">👤 Customers<span class="key-hint">5</span></a>
+  <a href="suppliers.html" class="active">🏭 Suppliers<span class="key-hint">6</span></a>
+  <a href="expenses.html">💸 Expenses<span class="key-hint">7</span></a>
+  <a href="reports.html">📊 Reports<span class="key-hint">8</span></a>
+  <a href="retrieve-bill.html">🔍 Find Bill<span class="key-hint">9</span></a>
+</div>
+
+<div class="container">
+  <!-- Add Supplier -->
+  <div class="card">
+    <h3 style="margin-bottom:12px;">➕ Add Supplier</h3>
+    <div class="row">
+      <div class="f"><label>Name *</label><input id="sname" placeholder="Supplier name"></div>
+      <div class="f"><label>Phone</label><input id="sphone" placeholder="Phone"></div>
+      <div class="f" style="flex:1;"><label>Address</label><input id="saddress" placeholder="Address"></div>
+      <div class="f"><label>&nbsp;</label><button onclick="addSupplier()">Add</button></div>
+    </div>
+  </div>
+
+  <!-- Supplier List -->
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+      <h3>Supplier List</h3>
+      <input id="searchSupp" placeholder="Search name or phone..." oninput="filterSuppliers()" style="width:200px;">
+    </div>
+    <div style="overflow-x:auto;">
+      <table>
+        <thead><tr><th>Name</th><th>Phone</th><th>Address</th><th>Balance Due</th><th>Actions</th></tr></thead>
+        <tbody id="suppBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Supplier Detail Modal -->
+<div class="modal-overlay" id="suppModal">
+  <div class="modal">
+    <h3 id="suppTitle">Supplier</h3>
+    <div class="tab-btns">
+      <button class="tab-btn active" id="tb1" onclick="showTab('purchTab',this)">📋 Purchases</button>
+      <button class="tab-btn" id="tb2" onclick="showTab('payTab',this)">💳 Payments</button>
+      <button class="tab-btn" id="tb3" onclick="showTab('stmtTab',this)">📊 Statement</button>
+      <button class="tab-btn" id="tb4" onclick="showTab('addPayTab',this)">➕ Payment</button>
+      <button class="tab-btn" id="tb5" onclick="showTab('editTab',this)">✏️ Edit</button>
+    </div>
+
+    <!-- Purchases Tab -->
+    <div class="tab show" id="purchTab"><div id="purchContent"><p style="color:#888;">Loading...</p></div></div>
+
+    <!-- Payments Tab -->
+    <div class="tab" id="payTab"><div id="payContent"><p style="color:#888;">Loading...</p></div></div>
+
+    <!-- Statement Tab -->
+    <div class="tab" id="stmtTab">
+      <div class="no-print" style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-bottom:12px;">
+        <div class="f"><label>From Date</label><input type="date" id="stmtFrom" style="width:150px;"></div>
+        <div class="f"><label>To Date</label><input type="date" id="stmtTo" style="width:150px;"></div>
+        <div class="f"><label>&nbsp;</label><button onclick="loadStatement()" style="padding:7px 14px;">Filter</button></div>
+        <div class="f"><label>&nbsp;</label><button onclick="clearStmt()" style="padding:7px 14px;background:#888;">All Time</button></div>
+      </div>
+      <div class="no-print" style="display:flex;gap:8px;margin-bottom:12px;">
+        <button class="warn" onclick="printStatement()">🖨️ Print</button>
+        <button class="purple2" onclick="sharePDFStatement()">📤 Share PDF</button>
+      </div>
+      <div id="stmtContent"></div>
+      <div id="stmtPrint"></div>
+    </div>
+
+    <!-- Add Payment Tab -->
+    <div class="tab" id="addPayTab">
+      <div class="row" style="margin-top:8px;">
+        <div class="f"><label>Amount ₹ *</label><input type="number" id="mpayAmt" placeholder="0.00"></div>
+        <div class="f"><label>Date</label><input type="date" id="mpayDate"></div>
+        <div class="f"><label>Note</label><input id="mpayNote" placeholder="e.g. NEFT"></div>
+      </div>
+      <button class="success" onclick="submitPayment()">💾 Record Payment</button>
+    </div>
+
+    <!-- Edit Tab -->
+    <div class="tab" id="editTab">
+      <div class="row" style="margin-top:8px;">
+        <div class="f"><label>Name *</label><input id="eSuppName"></div>
+        <div class="f"><label>Phone</label><input id="eSuppPhone"></div>
+      </div>
+      <div class="f" style="margin-bottom:12px;"><label>Address</label><input id="eSuppAddress"></div>
+      <button class="success" onclick="saveEditSupplier()">💾 Save Changes</button>
+    </div>
+
+    <div style="margin-top:16px;text-align:right;" class="no-print">
+      <button class="danger" onclick="closeModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const API=`${window.location.protocol}//${window.location.hostname}:3000`;
+const SHOP="SUN CERAMIC",PHONE_NO="9942607766";
+if(!sessionStorage.getItem("loggedIn"))window.location.href="login.html";
+
+let allSuppliers=[],currentSuppId=null;
+
+window.addEventListener("DOMContentLoaded",()=>{
+  loadSuppliers();
+  document.getElementById("mpayDate").value=new Date().toISOString().split("T")[0];
+  const now=new Date();
+  document.getElementById("stmtFrom").value=now.getFullYear()+"-04-01";
+  document.getElementById("stmtTo").value=now.toISOString().split("T")[0];
+});
+
+function addSupplier(){
+  const name=document.getElementById("sname").value.trim();
+  if(!name){alert("Enter supplier name");return;}
+  fetch(API+"/suppliers",{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({name,phone:document.getElementById("sphone").value.trim(),address:document.getElementById("saddress").value.trim()})})
+  .then(r=>r.json()).then(d=>{
+    if(d.error){alert("Error: "+d.error);return;}
+    ["sname","sphone","saddress"].forEach(id=>document.getElementById(id).value="");
+    loadSuppliers();
+  });
+}
+
+function loadSuppliers(){
+  fetch(API+"/suppliers").then(r=>r.json()).then(data=>{allSuppliers=data;renderSuppliers(data);});
+}
+
+function filterSuppliers(){
+  const q=document.getElementById("searchSupp").value.toLowerCase();
+  renderSuppliers(allSuppliers.filter(s=>s.name.toLowerCase().includes(q)||(s.phone||"").includes(q)));
+}
+
+function renderSuppliers(data){
+  const tbody=document.getElementById("suppBody");
+  tbody.innerHTML="";
+  if(!data.length){tbody.innerHTML=`<tr><td colspan="5" style="color:#888;">No suppliers</td></tr>`;return;}
+  data.forEach(s=>{
+    const bal=parseFloat(s.balance)||0;
+    tbody.innerHTML+=`<tr>
+      <td style="text-align:left;font-weight:bold;">${s.name}</td>
+      <td>${s.phone||"-"}</td>
+      <td style="text-align:left;">${s.address||"-"}</td>
+      <td>${bal>0?`<span class="badge-due">₹${bal.toFixed(2)}</span>`:"✅ Nil"}</td>
+      <td style="white-space:nowrap;">
+        <button class="blue" onclick="openModal(${s.supplier_id})" style="padding:5px 10px;font-size:12px;">👁 View</button>
+        <button class="warn" onclick="openModalTab(${s.supplier_id},'stmtTab','tb3')" style="padding:5px 10px;font-size:12px;margin-left:4px;">📊 Statement</button>
+        <button onclick="openModalTab(${s.supplier_id},'editTab','tb5')" style="padding:5px 10px;font-size:12px;margin-left:4px;">✏️ Edit</button>
+        <button class="danger" onclick="deleteSupplier(${s.supplier_id})" style="padding:5px 10px;font-size:12px;margin-left:4px;">🗑</button>
+      </td>
+    </tr>`;
+  });
+}
+
+function deleteSupplier(id){
+  if(!confirm("Delete this supplier?"))return;
+  fetch(API+"/supplier/"+id,{method:"DELETE"}).then(()=>loadSuppliers());
+}
+
+function openModal(id){
+  currentSuppId=id;
+  const s=allSuppliers.find(s=>s.supplier_id===id);
+  if(!s)return;
+  document.getElementById("suppTitle").innerText="🏭 "+s.name+(parseFloat(s.balance)>0?" | Due: ₹"+parseFloat(s.balance).toFixed(2):"");
+  document.getElementById("eSuppName").value=s.name;
+  document.getElementById("eSuppPhone").value=s.phone||"";
+  document.getElementById("eSuppAddress").value=s.address||"";
+  document.getElementById("suppModal").classList.add("show");
+  showTab("purchTab",document.getElementById("tb1"));
+  loadPurchHistory();
+  loadPayHistory();
+}
+
+function openModalTab(id,tabId,btnId){
+  openModal(id);
+  showTab(tabId,document.getElementById(btnId));
+  if(tabId==="stmtTab") loadStatement();
+}
+
+function closeModal(){document.getElementById("suppModal").classList.remove("show");currentSuppId=null;}
+
+function showTab(tabId,btn){
+  document.querySelectorAll(".tab").forEach(t=>t.classList.remove("show"));
+  document.querySelectorAll(".tab-btn").forEach(b=>b.classList.remove("active"));
+  document.getElementById(tabId).classList.add("show");
+  btn.classList.add("active");
+}
+
+function loadPurchHistory(){
+  fetch(API+"/purchase-bills").then(r=>r.json()).then(data=>{
+    const bills=data.filter(b=>b.supplier_id==currentSuppId);
+    const div=document.getElementById("purchContent");
+    if(!bills.length){div.innerHTML="<p style='color:#888;'>No purchases yet</p>";return;}
+    const totalAmt=bills.reduce((s,b)=>s+parseFloat(b.total_amount||0),0);
+    const totalPaid=bills.reduce((s,b)=>s+parseFloat(b.paid_amount||0),0);
+    const totalBal=bills.reduce((s,b)=>s+parseFloat(b.balance||0),0);
+    div.innerHTML=`
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;">
+        <div style="background:#f8f9fa;padding:10px 14px;border-radius:8px;flex:1;text-align:center;"><div style="font-size:11px;color:#888;">Total Purchased</div><div style="font-size:17px;font-weight:bold;">₹${totalAmt.toFixed(2)}</div></div>
+        <div style="background:#e8f7ef;padding:10px 14px;border-radius:8px;flex:1;text-align:center;"><div style="font-size:11px;color:#888;">Total Paid</div><div style="font-size:17px;font-weight:bold;color:#28a745;">₹${totalPaid.toFixed(2)}</div></div>
+        <div style="background:${totalBal>0?"#fff3cd":"#e8f7ef"};padding:10px 14px;border-radius:8px;flex:1;text-align:center;"><div style="font-size:11px;color:#888;">Balance Due</div><div style="font-size:17px;font-weight:bold;color:${totalBal>0?"#856404":"#28a745"};">₹${totalBal.toFixed(2)}</div></div>
+      </div>
+      <table style="width:100%;border-collapse:collapse;font-size:13px;">
+        <tr style="background:#f0f4f8;"><th style="padding:7px;">PB No</th><th>Date</th><th>Mode</th><th>Total</th><th>Paid</th><th>Balance</th></tr>
+        ${bills.map(b=>`<tr style="border-bottom:1px solid #eee;">
+          <td style="padding:7px;text-align:center;">PB-${b.pb_id}</td>
+          <td>${new Date(b.bill_date).toLocaleDateString("en-IN")}</td>
+          <td>${b.payment_mode}</td>
+          <td>₹${parseFloat(b.total_amount).toFixed(2)}</td>
+          <td style="color:#28a745;">₹${parseFloat(b.paid_amount).toFixed(2)}</td>
+          <td style="color:${parseFloat(b.balance)>0?"#dc3545":"#28a745"};font-weight:bold;">₹${parseFloat(b.balance).toFixed(2)}</td>
+        </tr>`).join("")}
+      </table>`;
+  });
+}
+
+function loadPayHistory(){
+  fetch(API+"/supplier-payments/"+currentSuppId).then(r=>r.json()).then(data=>{
+    const div=document.getElementById("payContent");
+    if(!data.length){div.innerHTML="<p style='color:#888;'>No payments yet</p>";return;}
+    let total=0;data.forEach(p=>total+=parseFloat(p.amount));
+    div.innerHTML=`<table style="width:100%;border-collapse:collapse;font-size:13px;">
+      <tr style="background:#f0f4f8;"><th style="padding:7px;">Date</th><th>Amount</th><th>Bill Ref</th><th>Note</th></tr>
+      ${data.map(p=>`<tr style="border-bottom:1px solid #eee;">
+        <td style="padding:7px;text-align:center;">${new Date(p.payment_date).toLocaleDateString("en-IN")}</td>
+        <td style="color:#28a745;font-weight:bold;">₹${parseFloat(p.amount).toFixed(2)}</td>
+        <td>${p.pb_id?"PB-"+p.pb_id:"-"}</td>
+        <td>${p.note||"-"}</td>
+      </tr>`).join("")}
+    </table>
+    <p style="text-align:right;margin-top:8px;font-weight:bold;color:#28a745;">Total Paid: ₹${total.toFixed(2)}</p>`;
+  });
+}
+
+// ── STATEMENT ─────────────────────────────────────────
+function loadStatement(){
+  const from=document.getElementById("stmtFrom").value;
+  const to=document.getElementById("stmtTo").value;
+  let url=`${API}/supplier-statement/${currentSuppId}`;
+  const params=[];
+  if(from)params.push("from_date="+from);
+  if(to)params.push("to_date="+to);
+  if(params.length)url+="?"+params.join("&");
+
+  const s=allSuppliers.find(s=>s.supplier_id===currentSuppId);
+
+  fetch(url).then(r=>r.json()).then(d=>{
+    const rows=d.transactions||[];
+
+    const tbody=rows.map(t=>{
+      const debit=parseFloat(t.debit_amt)||0;
+      const credit=parseFloat(t.credit_amt)||0;
+      const bal=parseFloat(t.running_balance)||0;
+      return `<tr>
+        <td>${new Date(t.txn_date).toLocaleDateString("en-IN")}</td>
+        <td style="text-align:left;">${t.txn_type==="Purchase"?"Purchase a/c":"Cash A/c"}</td>
+        <td>${t.txn_type==="Purchase"?"PB Purchase":"Payment"}</td>
+        <td>${t.txn_type==="Purchase"?"PB-"+t.pb_id:"Pay-"+t.sp_id}</td>
+        <td style="color:#dc3545;font-weight:bold;">${debit>0?"₹"+debit.toFixed(2):""}</td>
+        <td style="color:#28a745;font-weight:bold;">${credit>0?"₹"+credit.toFixed(2):""}</td>
+        <td style="font-weight:bold;color:${bal>0?"#dc3545":"#28a745"};">₹${Math.abs(bal).toFixed(2)} ${bal>0?"Dr":"Cr"}</td>
+      </tr>`;
+    }).join("");
+
+    const closing=parseFloat(d.closing_balance)||0;
+    const totalDebit=rows.reduce((s,t)=>s+(parseFloat(t.debit_amt)||0),0);
+    const totalCredit=rows.reduce((s,t)=>s+(parseFloat(t.credit_amt)||0),0);
+    const suppName=s?s.name:"Supplier";
+    const dateRange=(from||to)?`${from||"start"} To ${to||"today"}`:"All Time";
+
+    document.getElementById("stmtContent").innerHTML=`
+      <div style="font-family:'Courier New',monospace;font-size:13px;">
+        <div style="text-align:center;margin-bottom:8px;"><b style="font-size:16px;">${SHOP}</b><br>CELL: ${PHONE_NO}</div>
+        <div style="text-align:center;margin-bottom:4px;"><b>Ledger of: ${suppName}</b></div>
+        <div style="text-align:center;font-size:12px;color:#888;margin-bottom:8px;">${dateRange}</div>
+        <div style="border-top:2px solid #333;border-bottom:1px solid #333;padding:4px 0;margin:4px 0;"></div>
+        <table style="width:100%;border-collapse:collapse;font-size:12px;">
+          <thead><tr>
+            <th style="padding:6px;border:1px solid #ddd;">Date</th>
+            <th style="border:1px solid #ddd;">Particulars</th>
+            <th style="border:1px solid #ddd;">Vch Type</th>
+            <th style="border:1px solid #ddd;">Vch No</th>
+            <th style="border:1px solid #ddd;color:#dc3545;">Debit (We Owe)</th>
+            <th style="border:1px solid #ddd;color:#28a745;">Credit (Paid)</th>
+            <th style="border:1px solid #ddd;">Balance</th>
+          </tr></thead>
+          <tbody>${tbody||`<tr><td colspan="7" style="color:#888;padding:10px;text-align:center;">No transactions in this period</td></tr>`}</tbody>
+          <tfoot><tr style="background:#f0f4f8;font-weight:bold;">
+            <td colspan="4" style="padding:6px;border:1px solid #ddd;">TOTAL</td>
+            <td style="border:1px solid #ddd;color:#dc3545;">₹${totalDebit.toFixed(2)}</td>
+            <td style="border:1px solid #ddd;color:#28a745;">₹${totalCredit.toFixed(2)}</td>
+            <td style="border:1px solid #ddd;"></td>
+          </tr></tfoot>
+        </table>
+        <div style="border-top:2px solid #333;margin-top:8px;padding-top:6px;text-align:right;font-weight:bold;">
+          Closing Balance : ₹${closing.toFixed(2)} ${closing>0?"Dr":"Cr"}
+        </div>
+        <div style="text-align:right;margin-top:4px;font-size:12px;color:#555;">
+          Total Purchased: ₹${totalDebit.toFixed(2)} &nbsp;|&nbsp; Total Paid: ₹${totalCredit.toFixed(2)}
+        </div>
+      </div>`;
+
+    buildPrintArea(d, suppName, dateRange, rows, closing);
+  });
+}
+
+function buildPrintArea(d, suppName, dateRange, rows, closing){
+  const totalDebit=rows.reduce((s,t)=>s+(parseFloat(t.debit_amt)||0),0);
+  const totalCredit=rows.reduce((s,t)=>s+(parseFloat(t.credit_amt)||0),0);
+  const tbody=rows.map(t=>{
+    const debit=parseFloat(t.debit_amt)||0;
+    const credit=parseFloat(t.credit_amt)||0;
+    const bal=parseFloat(t.running_balance)||0;
+    return `<tr>
+      <td style="padding:5px;border:1px solid #333;">${new Date(t.txn_date).toLocaleDateString("en-IN")}</td>
+      <td style="border:1px solid #333;">${t.txn_type==="Purchase"?"Purchase a/c":"Cash A/c"}</td>
+      <td style="border:1px solid #333;">${t.txn_type==="Purchase"?"PB Purchase":"Payment"}</td>
+      <td style="border:1px solid #333;">${t.txn_type==="Purchase"?"PB-"+t.pb_id:"Pay-"+t.sp_id}</td>
+      <td style="border:1px solid #333;text-align:right;">${debit>0?debit.toFixed(2):""}</td>
+      <td style="border:1px solid #333;text-align:right;">${credit>0?credit.toFixed(2):""}</td>
+      <td style="border:1px solid #333;text-align:right;font-weight:bold;">₹${Math.abs(bal).toFixed(2)} ${bal>0?"Dr":"Cr"}</td>
+    </tr>`;
+  }).join("");
+
+  document.getElementById("stmtPrint").innerHTML=`
+    <div style="text-align:center;"><b style="font-size:18px;">${SHOP}</b><br>CELL: ${PHONE_NO}</div>
+    <div style="text-align:center;margin:6px 0;"><b>Ledger of: ${suppName}</b></div>
+    <div style="text-align:center;font-size:12px;margin-bottom:6px;">${dateRange}</div>
+    <hr style="border:1px solid #333;">
+    <table style="width:100%;border-collapse:collapse;font-size:12px;">
+      <thead><tr>
+        <th style="padding:5px;border:1px solid #333;">Date</th>
+        <th style="border:1px solid #333;">Particulars</th>
+        <th style="border:1px solid #333;">Vch Type</th>
+        <th style="border:1px solid #333;">Vch No</th>
+        <th style="border:1px solid #333;text-align:right;">Debit</th>
+        <th style="border:1px solid #333;text-align:right;">Credit</th>
+        <th style="border:1px solid #333;text-align:right;">Balance</th>
+      </tr></thead>
+      <tbody>${tbody}</tbody>
+      <tfoot><tr style="font-weight:bold;">
+        <td colspan="4" style="padding:5px;border:1px solid #333;">TOTAL</td>
+        <td style="border:1px solid #333;text-align:right;">₹${totalDebit.toFixed(2)}</td>
+        <td style="border:1px solid #333;text-align:right;">₹${totalCredit.toFixed(2)}</td>
+        <td style="border:1px solid #333;"></td>
+      </tr></tfoot>
+    </table>
+    <hr style="border:1px solid #333;margin-top:8px;">
+    <div style="text-align:right;font-weight:bold;margin-top:4px;">
+      Closing Balance : ₹${closing.toFixed(2)} ${closing>0?"Dr":"Cr"}
+    </div>
+    <div style="text-align:right;font-size:12px;margin-top:4px;">
+      Total Purchased: ₹${totalDebit.toFixed(2)} &nbsp;|&nbsp; Total Paid: ₹${totalCredit.toFixed(2)}
+    </div>`;
+}
+
+function clearStmt(){
+  document.getElementById("stmtFrom").value="";
+  document.getElementById("stmtTo").value="";
+  loadStatement();
+}
+
+function printStatement(){
+  document.getElementById("stmtPrint").style.display="block";
+  window.print();
+  setTimeout(()=>{document.getElementById("stmtPrint").style.display="none";},600);
+}
+
+async function sharePDFStatement(){
+  const btn=event.target;const orig=btn.innerText;btn.innerText="⏳...";btn.disabled=true;
+  document.getElementById("stmtPrint").style.display="block";
+  try{
+    const {jsPDF}=window.jspdf;
+    const canvas=await html2canvas(document.getElementById("stmtPrint"),{scale:2,backgroundColor:"#ffffff"});
+    document.getElementById("stmtPrint").style.display="none";
+    const pdf=new jsPDF({orientation:"portrait",unit:"mm",format:"a4"});
+    const pw=pdf.internal.pageSize.getWidth()-20;
+    pdf.addImage(canvas.toDataURL("image/png"),"PNG",10,10,pw,(canvas.height*pw)/canvas.width);
+    const s=allSuppliers.find(s=>s.supplier_id===currentSuppId);
+    const fname="Supplier-Statement-"+(s?s.name:"supplier")+".pdf";
+    if(navigator.share){const blob=pdf.output("blob");const file=new File([blob],fname,{type:"application/pdf"});try{await navigator.share({files:[file],title:"Supplier Statement",text:"Statement from "+SHOP});btn.innerText=orig;btn.disabled=false;return;}catch(ex){}}
+    pdf.save(fname);
+  }catch(e){document.getElementById("stmtPrint").style.display="none";alert("PDF error: "+e.message);}
+  btn.innerText=orig;btn.disabled=false;
+}
+
+// ── PAYMENT ────────────────────────────────────────────
+function submitPayment(){
+  const amount=parseFloat(document.getElementById("mpayAmt").value);
+  const date=document.getElementById("mpayDate").value;
+  const note=document.getElementById("mpayNote").value;
+  if(!amount||amount<=0){alert("Enter valid amount");return;}
+  fetch(API+"/supplier-payment",{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({supplier_id:currentSuppId,amount,payment_date:date,note})})
+  .then(r=>r.json()).then(d=>{
+    if(d.error){alert("Error: "+d.error);return;}
+    alert("✅ Payment recorded!");
+    document.getElementById("mpayAmt").value="";
+    document.getElementById("mpayNote").value="";
+    loadSuppliers();loadPayHistory();
+    showTab("payTab",document.getElementById("tb2"));
+  });
+}
+
+// ── EDIT SUPPLIER ──────────────────────────────────────
+function saveEditSupplier(){
+  const name=document.getElementById("eSuppName").value.trim();
+  if(!name){alert("Name required");return;}
+  fetch(API+"/supplier/"+currentSuppId,{method:"PUT",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({name,phone:document.getElementById("eSuppPhone").value.trim(),address:document.getElementById("eSuppAddress").value.trim()})})
+  .then(r=>r.json()).then(d=>{
+    if(d.error){alert("Error: "+d.error);return;}
+    alert("✅ Supplier updated!");
+    loadSuppliers();
+    // Update title
+    document.getElementById("suppTitle").innerText="🏭 "+name;
+    showTab("purchTab",document.getElementById("tb1"));
+  });
+}
+
+document.addEventListener("keydown",e=>{
+  if(e.key==="Escape"){
+    if(document.getElementById("suppModal").classList.contains("show")){closeModal();return;}
+    window.location.href="index.html";return;
+  }
+  const tag=document.activeElement?document.activeElement.tagName:"";
+  if(tag==="INPUT"||tag==="TEXTAREA"||tag==="SELECT")return;
+  const p={"0":"index.html","1":"billing.html","2":"quotation.html","3":"purchase-bill.html","4":"products.html","5":"customers.html","6":"suppliers.html","7":"expenses.html","8":"reports.html","9":"retrieve-bill.html"};
+  if(p[e.key]){e.preventDefault();window.location.href=p[e.key];}
+});
+</script>
+</body>
+</html>

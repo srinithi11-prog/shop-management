@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Products</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:Arial,sans-serif;background:#f0f4f8;}
+    .topbar{background:#007bff;color:white;padding:14px 24px;}
+    .topbar h1{font-size:20px;}
+    .nav{background:white;display:flex;gap:8px;padding:10px 20px;box-shadow:0 2px 6px rgba(0,0,0,0.08);flex-wrap:wrap;}
+    .nav a{text-decoration:none;background:#007bff;color:white;padding:7px 14px;border-radius:6px;font-size:13px;position:relative;}
+    .nav a:hover,.nav a.active{background:#0056b3;}
+    .key-hint{position:absolute;top:-6px;right:-4px;background:#ff9800;color:white;font-size:9px;padding:1px 4px;border-radius:3px;font-weight:bold;}
+    .container{padding:18px 24px;max-width:1100px;}
+    .card{background:white;padding:18px;border-radius:10px;margin-bottom:16px;box-shadow:0 2px 8px rgba(0,0,0,0.08);}
+    label{font-size:13px;color:#555;font-weight:bold;display:block;margin-bottom:3px;}
+    input,select{padding:7px 9px;border:1px solid #ccc;border-radius:5px;font-size:13px;outline:none;width:100%;}
+    input:focus,select:focus{border-color:#007bff;}
+    button{background:#007bff;color:white;border:none;padding:8px 16px;border-radius:5px;cursor:pointer;font-size:13px;font-weight:bold;}
+    button:hover{background:#0056b3;}
+    button.danger{background:#dc3545;}button.danger:hover{background:#a71d2a;}
+    button.success{background:#28a745;}button.success:hover{background:#1a6e30;}
+    button.warn{background:#fd7e14;}button.warn:hover{background:#c96a00;}
+    .row{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:10px;}
+    .f{display:flex;flex-direction:column;gap:3px;}
+    table{width:100%;border-collapse:collapse;}
+    th{background:#007bff;color:white;padding:8px;font-size:13px;}
+    td{padding:7px;border:1px solid #eee;font-size:13px;text-align:center;}
+    .code-badge{background:#e8f4fd;color:#007bff;padding:2px 8px;border-radius:5px;font-size:12px;font-weight:bold;font-family:monospace;}
+    .pagination{display:flex;gap:8px;align-items:center;justify-content:center;margin-top:14px;}
+    .pagination button{padding:6px 14px;font-size:13px;}
+    .pagination span{font-size:13px;color:#555;}
+    .worth-badge{background:#e8f7ef;color:#28a745;padding:10px 20px;border-radius:8px;font-size:16px;font-weight:bold;display:inline-block;margin-bottom:16px;}
+    .modal-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.45);z-index:100;justify-content:center;align-items:flex-start;overflow-y:auto;padding:20px 10px;}
+    .modal-overlay.show{display:flex;}
+    .modal{background:white;padding:22px;border-radius:10px;width:600px;max-width:98%;margin:auto;}
+    .price-box{background:#fff8e1;border:2px solid #ffc107;border-radius:8px;padding:14px;margin-bottom:14px;}
+  </style>
+</head>
+<body>
+<div class="topbar"><h1>📦 Products</h1></div>
+<div class="nav">
+  <a href="index.html">🏠 Home<span class="key-hint">0</span></a>
+  <a href="billing.html">🧾 Billing<span class="key-hint">1</span></a>
+  <a href="quotation.html">📋 Quotation<span class="key-hint">2</span></a>
+  <a href="purchase-bill.html">📥 Purchase<span class="key-hint">3</span></a>
+  <a href="products.html" class="active">📦 Products<span class="key-hint">4</span></a>
+  <a href="customers.html">👤 Customers<span class="key-hint">5</span></a>
+  <a href="suppliers.html">🏭 Suppliers<span class="key-hint">6</span></a>
+  <a href="expenses.html">💸 Expenses<span class="key-hint">7</span></a>
+  <a href="reports.html">📊 Reports<span class="key-hint">8</span></a>
+  <a href="retrieve-bill.html">🔍 Find Bill<span class="key-hint">9</span></a>
+</div>
+
+<div class="container">
+  <div id="worthBadge" class="worth-badge">💰 Total Stock Worth: ₹0.00</div>
+
+  <!-- Add Product -->
+  <div class="card">
+    <h3 style="margin-bottom:14px;">➕ Add New Product</h3>
+    <div class="row">
+      <div class="f"><label>Product Code *</label><input id="pcode" placeholder="e.g. TL001"></div>
+      <div class="f" style="flex:1;"><label>Product Name *</label><input id="pname" placeholder="e.g. Floor Tile 60x60"></div>
+      <div class="f"><label>Brand</label><input id="pbrand" placeholder="e.g. Johnson"></div>
+      <div class="f"><label>HSN Code</label><input id="phsn" placeholder="e.g. 6907"></div>
+    </div>
+    <div style="background:#f0f8ff;border:1px solid #007bff;border-radius:8px;padding:14px;margin-bottom:12px;">
+      <p style="font-size:13px;font-weight:bold;color:#007bff;margin-bottom:10px;">📦 Initial Stock</p>
+      <div class="row">
+        <div class="f"><label>Purchase Price ₹ *</label><input type="number" id="ppurchase" placeholder="Cost price"></div>
+        <div class="f"><label>Selling Price ₹ *</label><input type="number" id="pmrp" placeholder="MRP"></div>
+        <div class="f"><label>Quantity *</label><input type="number" id="pqty" placeholder="Units"></div>
+        <div class="f"><label>Min Stock Alert</label><input type="number" id="pmin" value="5"></div>
+      </div>
+    </div>
+    <button onclick="addProduct()">✅ Add Product</button>
+  </div>
+
+  <!-- Product List -->
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
+      <h3>Product List</h3>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <input id="searchProd" placeholder="Search code or name..." oninput="searchProducts()" style="width:200px;">
+        <select id="brandFilter" onchange="searchProducts()" style="width:140px;">
+          <option value="">All Brands</option>
+        </select>
+      </div>
+    </div>
+
+    <div style="overflow-x:auto;">
+      <table id="prodTable">
+        <thead>
+          <tr><th>Code</th><th>Product Name</th><th>Brand</th><th>HSN</th><th>Stock</th><th>Prices</th><th>Actions</th></tr>
+        </thead>
+        <tbody id="prodBody"></tbody>
+      </table>
+    </div>
+
+    <!-- Pagination with arrow navigation -->
+    <div class="pagination" id="prodPagination"></div>
+    <div style="text-align:center;margin-top:8px;font-size:12px;color:#888;">
+      Use ◀ ▶ arrows to navigate products one by one
+    </div>
+  </div>
+</div>
+
+<!-- View/Edit Modal -->
+<div class="modal-overlay" id="prodModal">
+  <div class="modal">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+      <h3 id="modalProdTitle" style="color:#007bff;">Product Details</h3>
+      <div style="display:flex;gap:8px;">
+        <button id="prevProdBtn" onclick="navProduct(-1)" style="padding:5px 12px;">◀ Prev</button>
+        <span id="navLabel" style="font-size:13px;color:#555;align-self:center;"></span>
+        <button id="nextProdBtn" onclick="navProduct(1)" style="padding:5px 12px;">Next ▶</button>
+      </div>
+    </div>
+
+    <!-- View Section -->
+    <div id="viewSection">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:13px;margin-bottom:14px;" id="viewInfo"></div>
+      <div id="batchInfo"></div>
+    </div>
+
+    <!-- Edit Section -->
+    <div id="editSection" style="display:none;">
+      <div class="row">
+        <div class="f"><label>Product Code</label><input id="ePcode"></div>
+        <div class="f" style="flex:1;"><label>Product Name *</label><input id="ePname"></div>
+      </div>
+      <div class="row">
+        <div class="f"><label>Brand</label><input id="ePbrand"></div>
+        <div class="f"><label>HSN Code</label><input id="ePhsn"></div>
+      </div>
+      <div style="margin-top:10px;display:flex;gap:8px;">
+        <button class="success" onclick="saveEditProduct()">💾 Save Changes</button>
+        <button onclick="toggleEditSection(false)">Cancel</button>
+      </div>
+    </div>
+
+    <!-- Add Batch Section -->
+    <div class="price-box" id="addBatchSection" style="margin-top:14px;">
+      <h4 style="color:#856404;margin-bottom:10px;">➕ Add New Stock Batch</h4>
+      <div class="row">
+        <div class="f"><label>Purchase ₹</label><input type="number" id="bPurchase" placeholder="Cost"></div>
+        <div class="f"><label>Selling ₹</label><input type="number" id="bSelling" placeholder="MRP"></div>
+        <div class="f"><label>Qty</label><input type="number" id="bQty" placeholder="Units"></div>
+        <div class="f"><label>Min Stock</label><input type="number" id="bMin" value="5"></div>
+      </div>
+      <button class="success" onclick="addBatch()">✅ Add Stock</button>
+    </div>
+
+    <div style="margin-top:14px;display:flex;justify-content:space-between;align-items:center;" class="no-print">
+      <div style="display:flex;gap:8px;">
+        <button class="warn" onclick="toggleEditSection(true)">✏️ Edit Details</button>
+        <button class="danger" onclick="deleteProduct()">🗑 Delete</button>
+      </div>
+      <button onclick="closeModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const API=`${window.location.protocol}//${window.location.hostname}:3000`;
+if(!sessionStorage.getItem("loggedIn"))window.location.href="login.html";
+
+let allProducts=[],filteredProducts=[],currentPage=1,currentModalIdx=0;
+const PAGE_SIZE=10;
+
+window.addEventListener("DOMContentLoaded",()=>{
+  loadProducts();
+  loadWorth();
+});
+
+function loadWorth(){
+  fetch(API+"/stock-worth").then(r=>r.json()).then(d=>{
+    document.getElementById("worthBadge").innerText="💰 Total Stock Worth: ₹"+parseFloat(d.worth||0).toFixed(2);
+  });
+}
+
+function loadProducts(){
+  fetch(API+"/products").then(r=>r.json()).then(data=>{
+    allProducts=data;
+    // Build brand filter
+    const brands=new Set(data.map(p=>p.brand).filter(Boolean));
+    const bf=document.getElementById("brandFilter");
+    const cur=bf.value;
+    bf.innerHTML=`<option value="">All Brands</option>`;
+    brands.forEach(b=>bf.innerHTML+=`<option value="${b}"${b===cur?" selected":""}>${b}</option>`);
+    applyFilter();
+  });
+}
+
+function searchProducts(){currentPage=1;applyFilter();}
+
+function applyFilter(){
+  const q=document.getElementById("searchProd").value.trim().toLowerCase();
+  const brand=document.getElementById("brandFilter").value;
+  filteredProducts=allProducts.filter(p=>
+    (!q||(p.product_code||"").toLowerCase().includes(q)||p.name.toLowerCase().includes(q)||(p.brand||"").toLowerCase().includes(q))&&
+    (!brand||p.brand===brand)
+  );
+  renderPage();
+}
+
+function renderPage(){
+  const start=(currentPage-1)*PAGE_SIZE;
+  const pageData=filteredProducts.slice(start,start+PAGE_SIZE);
+  const tbody=document.getElementById("prodBody");
+  tbody.innerHTML="";
+  if(!pageData.length){tbody.innerHTML=`<tr><td colspan="7" style="color:#888;">No products found</td></tr>`;renderPagination();return;}
+  pageData.forEach((p,i)=>{
+    const globalIdx=start+i;
+    const tr=document.createElement("tr");
+    tr.innerHTML=`
+      <td><span class="code-badge">${p.product_code||"-"}</span></td>
+      <td style="text-align:left;font-weight:bold;">${p.name}</td>
+      <td>${p.brand||"-"}</td>
+      <td>${p.hsn_code||"-"}</td>
+      <td id="stk_${p.product_id}">-</td>
+      <td id="prc_${p.product_id}" style="font-size:12px;">-</td>
+      <td style="white-space:nowrap;">
+        <button onclick="openModal(${globalIdx})" style="padding:5px 10px;font-size:12px;">👁 View</button>
+        <button class="warn" onclick="openModalEdit(${globalIdx})" style="padding:5px 10px;font-size:12px;margin-left:4px;">✏️ Edit</button>
+        <button class="danger" onclick="quickDelete(${p.product_id})" style="padding:5px 10px;font-size:12px;margin-left:4px;">🗑</button>
+      </td>`;
+    tbody.appendChild(tr);
+    // Load stock
+    fetch(API+"/batches/"+p.product_id).then(r=>r.json()).then(batches=>{
+      const sEl=document.getElementById("stk_"+p.product_id);
+      const pEl=document.getElementById("prc_"+p.product_id);
+      if(!sEl||!pEl)return;
+      const total=batches.reduce((s,b)=>s+b.remaining_quantity,0);
+      sEl.innerText=total;
+      sEl.style.color=total===0?"#dc3545":total<=5?"#fd7e14":"#28a745";
+      sEl.style.fontWeight="bold";
+      pEl.innerHTML=batches.length
+        ?batches.map(b=>`<span style="background:#e8f4fd;padding:2px 6px;border-radius:4px;margin:1px;display:inline-block;font-size:11px;">₹${parseFloat(b.mrp).toFixed(2)}(${b.remaining_quantity})</span>`).join("")
+        :`<span style="color:#aaa;">No stock</span>`;
+    });
+  });
+  renderPagination();
+}
+
+function renderPagination(){
+  const totalPages=Math.ceil(filteredProducts.length/PAGE_SIZE)||1;
+  const div=document.getElementById("prodPagination");
+  div.innerHTML="";
+  const mk=(txt,pg,dis)=>{const b=document.createElement("button");b.innerText=txt;b.onclick=()=>{currentPage=pg;renderPage();};b.disabled=dis;b.style.background=pg===currentPage?"#0056b3":"#007bff";return b;};
+  div.appendChild(mk("◀◀",1,currentPage===1));
+  div.appendChild(mk("◀",currentPage-1,currentPage===1));
+  const sp=document.createElement("span");sp.innerText=`${currentPage} / ${totalPages} (${filteredProducts.length} products)`;div.appendChild(sp);
+  div.appendChild(mk("▶",currentPage+1,currentPage===totalPages));
+  div.appendChild(mk("▶▶",totalPages,currentPage===totalPages));
+}
+
+// ── MODAL ──────────────────────────────────────────────
+function openModal(globalIdx){
+  currentModalIdx=globalIdx;
+  showProductModal(false);
+}
+function openModalEdit(globalIdx){
+  currentModalIdx=globalIdx;
+  showProductModal(true);
+}
+
+function showProductModal(editMode){
+  const p=filteredProducts[currentModalIdx];
+  if(!p)return;
+  document.getElementById("modalProdTitle").innerText=p.name;
+  document.getElementById("navLabel").innerText=(currentModalIdx+1)+" / "+filteredProducts.length;
+  document.getElementById("prevProdBtn").disabled=currentModalIdx===0;
+  document.getElementById("nextProdBtn").disabled=currentModalIdx===filteredProducts.length-1;
+
+  document.getElementById("viewInfo").innerHTML=`
+    <div><b>Code:</b> <span class="code-badge">${p.product_code||"—"}</span></div>
+    <div><b>Name:</b> ${p.name}</div>
+    <div><b>Brand:</b> ${p.brand||"—"}</div>
+    <div><b>HSN:</b> ${p.hsn_code||"—"}</div>
+  `;
+
+  // Fill edit fields
+  document.getElementById("ePcode").value=p.product_code||"";
+  document.getElementById("ePname").value=p.name;
+  document.getElementById("ePbrand").value=p.brand||"";
+  document.getElementById("ePhsn").value=p.hsn_code||"";
+
+  toggleEditSection(editMode);
+  loadModalBatches(p.product_id);
+  document.getElementById("prodModal").classList.add("show");
+}
+
+function navProduct(dir){
+  currentModalIdx+=dir;
+  if(currentModalIdx<0)currentModalIdx=0;
+  if(currentModalIdx>=filteredProducts.length)currentModalIdx=filteredProducts.length-1;
+  showProductModal(false);
+}
+
+function toggleEditSection(show){
+  document.getElementById("viewSection").style.display=show?"none":"block";
+  document.getElementById("editSection").style.display=show?"block":"none";
+}
+
+function saveEditProduct(){
+  const p=filteredProducts[currentModalIdx];
+  if(!p)return;
+  const name=document.getElementById("ePname").value.trim();
+  if(!name){alert("Name required");return;}
+  fetch(API+"/product/"+p.product_id,{method:"PUT",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({name,product_code:document.getElementById("ePcode").value.trim(),brand:document.getElementById("ePbrand").value.trim(),hsn_code:document.getElementById("ePhsn").value.trim()})})
+  .then(r=>r.json()).then(d=>{
+    if(d.error){alert("Error: "+d.error);return;}
+    alert("✅ Product updated!");
+    // Update local cache
+    p.name=name;p.product_code=document.getElementById("ePcode").value.trim();p.brand=document.getElementById("ePbrand").value.trim();p.hsn_code=document.getElementById("ePhsn").value.trim();
+    toggleEditSection(false);
+    document.getElementById("modalProdTitle").innerText=name;
+    document.getElementById("viewInfo").innerHTML=`
+      <div><b>Code:</b> <span class="code-badge">${p.product_code||"—"}</span></div>
+      <div><b>Name:</b> ${p.name}</div>
+      <div><b>Brand:</b> ${p.brand||"—"}</div>
+      <div><b>HSN:</b> ${p.hsn_code||"—"}</div>`;
+    loadProducts();
+  });
+}
+
+function loadModalBatches(product_id){
+  fetch(API+"/all-batches/"+product_id).then(r=>r.json()).then(data=>{
+    const total=data.reduce((s,b)=>s+b.remaining_quantity,0);
+    document.getElementById("batchInfo").innerHTML=`
+      <h4 style="margin-bottom:8px;color:#555;">Stock Batches — Total: <b style="color:#28a745;">${total} units</b></h4>
+      ${data.length?`<table style="width:100%;border-collapse:collapse;font-size:12px;">
+        <tr style="background:#f0f4f8;"><th style="padding:6px;border:1px solid #ddd;">Purchase ₹</th><th style="border:1px solid #ddd;">Selling ₹</th><th style="border:1px solid #ddd;">Stock</th><th style="border:1px solid #ddd;">Min</th><th style="border:1px solid #ddd;">Date</th><th style="border:1px solid #ddd;">Del</th></tr>
+        ${data.map(b=>`<tr>
+          <td style="padding:5px;border:1px solid #ddd;text-align:center;">₹${parseFloat(b.purchase_price).toFixed(2)}</td>
+          <td style="border:1px solid #ddd;text-align:center;font-weight:bold;color:#007bff;">₹${parseFloat(b.mrp).toFixed(2)}</td>
+          <td style="border:1px solid #ddd;text-align:center;font-weight:bold;color:${b.remaining_quantity===0?"#dc3545":"#28a745"};">${b.remaining_quantity}</td>
+          <td style="border:1px solid #ddd;text-align:center;">${b.min_stock}</td>
+          <td style="border:1px solid #ddd;text-align:center;">${b.purchase_date||"-"}</td>
+          <td style="border:1px solid #ddd;text-align:center;"><button class="danger" onclick="deleteBatch(${b.batch_id},${product_id})" style="padding:2px 6px;font-size:11px;">✕</button></td>
+        </tr>`).join("")}
+      </table>`:"<p style='color:#888;font-size:13px;'>No batches yet</p>"}`;
+  });
+}
+
+function addBatch(){
+  const p=filteredProducts[currentModalIdx];if(!p)return;
+  const pp=document.getElementById("bPurchase").value;
+  const sp=document.getElementById("bSelling").value;
+  const qty=document.getElementById("bQty").value;
+  if(!pp||!sp||!qty){alert("Enter purchase price, selling price and quantity");return;}
+  fetch(API+"/add-batch",{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({product_id:p.product_id,purchase_price:parseFloat(pp),mrp:parseFloat(sp),quantity:parseInt(qty),min_stock:parseInt(document.getElementById("bMin").value)||5})})
+  .then(r=>r.json()).then(d=>{
+    if(d.error){alert("Error: "+d.error);return;}
+    document.getElementById("bPurchase").value="";document.getElementById("bSelling").value="";document.getElementById("bQty").value="";
+    loadModalBatches(p.product_id);loadProducts();loadWorth();
+  });
+}
+
+function deleteBatch(batch_id,product_id){
+  if(!confirm("Delete this batch?"))return;
+  fetch(API+"/batch/"+batch_id,{method:"DELETE"}).then(()=>{loadModalBatches(product_id);loadProducts();loadWorth();});
+}
+
+function addProduct(){
+  const code=document.getElementById("pcode").value.trim();
+  const name=document.getElementById("pname").value.trim();
+  const purchase=document.getElementById("ppurchase").value;
+  const mrp=document.getElementById("pmrp").value;
+  const qty=document.getElementById("pqty").value;
+  if(!code){alert("Enter product code");return;}
+  if(!name){alert("Enter product name");return;}
+  if(!purchase||!mrp||!qty){alert("Enter purchase price, selling price and quantity");return;}
+  fetch(API+"/products",{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({product_code:code,name,brand:document.getElementById("pbrand").value.trim(),hsn_code:document.getElementById("phsn").value.trim()})})
+  .then(r=>r.json()).then(d=>{
+    if(d.error){alert("Error: "+d.error+" (Code may already exist)");return;}
+    fetch(API+"/add-batch",{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({product_id:d.product_id,purchase_price:parseFloat(purchase),mrp:parseFloat(mrp),quantity:parseInt(qty),min_stock:parseInt(document.getElementById("pmin").value)||5})})
+    .then(()=>{
+      ["pcode","pname","pbrand","phsn","ppurchase","pmrp","pqty"].forEach(id=>document.getElementById(id).value="");
+      document.getElementById("pmin").value="5";
+      loadProducts();loadWorth();
+    });
+  });
+}
+
+function quickDelete(product_id){
+  if(!confirm("Delete this product and all its stock?"))return;
+  fetch(API+"/product/"+product_id,{method:"DELETE"}).then(()=>{loadProducts();loadWorth();});
+}
+
+function deleteProduct(){
+  const p=filteredProducts[currentModalIdx];if(!p)return;
+  if(!confirm("Delete "+p.name+"?"))return;
+  fetch(API+"/product/"+p.product_id,{method:"DELETE"}).then(()=>{closeModal();loadProducts();loadWorth();});
+}
+
+function closeModal(){document.getElementById("prodModal").classList.remove("show");}
+
+document.addEventListener("keydown",e=>{
+  // Arrow navigation in modal
+  if(document.getElementById("prodModal").classList.contains("show")){
+    if(e.key==="ArrowLeft"&&currentModalIdx>0){navProduct(-1);return;}
+    if(e.key==="ArrowRight"&&currentModalIdx<filteredProducts.length-1){navProduct(1);return;}
+    if(e.key==="Escape"){closeModal();return;}
+  }
+  if(e.key==="Escape"){window.location.href="index.html";return;}
+  const tag=document.activeElement?document.activeElement.tagName:"";
+  if(tag==="INPUT"||tag==="TEXTAREA"||tag==="SELECT")return;
+  const pages={"0":"index.html","1":"billing.html","2":"quotation.html","3":"purchase-bill.html","4":"products.html","5":"customers.html","6":"suppliers.html","7":"expenses.html","8":"reports.html","9":"retrieve-bill.html"};
+  if(pages[e.key]){e.preventDefault();window.location.href=pages[e.key];}
+});
+</script>
+</body>
+</html>

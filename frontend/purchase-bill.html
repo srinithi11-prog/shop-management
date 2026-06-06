@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Purchase Bill - Shop Manager</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:Arial,sans-serif;background:#f0f4f8;}
+    .topbar{background:#28a745;color:white;padding:14px 24px;display:flex;justify-content:space-between;align-items:center;}
+    .topbar h1{font-size:20px;}
+    .nav{background:white;display:flex;gap:8px;padding:10px 20px;box-shadow:0 2px 6px rgba(0,0,0,0.08);flex-wrap:wrap;}
+    .nav a{text-decoration:none;background:#007bff;color:white;padding:7px 14px;border-radius:6px;font-size:13px;}
+    .nav a:hover,.nav a.active{background:#0056b3;}
+    .container{padding:18px 20px;max-width:1100px;margin:auto;}
+    .card{background:white;padding:18px;border-radius:10px;margin-bottom:16px;box-shadow:0 2px 8px rgba(0,0,0,0.08);}
+    label{font-size:13px;color:#555;font-weight:bold;display:block;margin-bottom:3px;}
+    select,input{padding:7px 9px;border:1px solid #ccc;border-radius:5px;font-size:13px;outline:none;width:100%;}
+    select:focus,input:focus{border-color:#28a745;}
+    button{background:#28a745;color:white;border:none;padding:8px 16px;border-radius:5px;cursor:pointer;font-size:13px;font-weight:bold;}
+    button:hover{background:#1a6e30;}
+    button.blue{background:#007bff;}button.blue:hover{background:#0056b3;}
+    button.danger{background:#dc3545;}button.danger:hover{background:#a71d2a;}
+    button.warn{background:#fd7e14;}button.warn:hover{background:#c96a00;}
+    .row{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:10px;}
+    .f{display:flex;flex-direction:column;gap:3px;}
+    .items-table{width:100%;border-collapse:collapse;margin-top:8px;}
+    .items-table th{background:#28a745;color:white;padding:8px 6px;font-size:12px;text-align:center;}
+    .items-table td{padding:4px;border:1px solid #eee;text-align:center;font-size:12px;vertical-align:top;}
+    .items-table td input{padding:5px;font-size:12px;border:1px solid #ccc;border-radius:4px;width:100%;}
+    .grand-total{text-align:right;font-size:17px;font-weight:bold;color:#28a745;margin-top:10px;}
+    .selected-tag{font-size:12px;color:#28a745;font-weight:bold;margin-top:3px;}
+    .new-prod-box{background:#e8f7ef;border:1px solid #28a745;border-radius:5px;padding:8px;margin-top:5px;display:none;}
+
+    /* Supplier search dropdown */
+    .supp-wrap{position:relative;}
+    .supp-drop{position:absolute;top:100%;left:0;width:100%;background:white;border:1px solid #aaa;border-radius:6px;max-height:200px;overflow-y:auto;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,0.15);display:none;}
+    .supp-drop-item{padding:8px 12px;cursor:pointer;border-bottom:1px solid #f0f0f0;font-size:13px;}
+    .supp-drop-item:hover,.supp-drop-item.dp-active{background:#e8f7ef;}
+
+    /* Product search dropdown */
+    .prod-drop{position:fixed;background:white;border:1px solid #aaa;border-radius:6px;max-height:200px;overflow-y:auto;z-index:9999;box-shadow:0 6px 18px rgba(0,0,0,0.18);display:none;min-width:220px;}
+    .prod-drop.open{display:block;}
+    .prod-drop-item{padding:8px 11px;cursor:pointer;border-bottom:1px solid #f0f0f0;}
+    .prod-drop-item:hover,.prod-drop-item.dp-active{background:#e8f7ef;}
+    .pdi-code{font-size:11px;color:#28a745;font-weight:bold;font-family:monospace;}
+    .pdi-name{font-size:13px;color:#222;}
+
+    table.hist-table{width:100%;border-collapse:collapse;}
+    table.hist-table th{background:#28a745;color:white;padding:8px;font-size:13px;}
+    table.hist-table td{padding:8px;border:1px solid #eee;font-size:13px;text-align:center;}
+    .badge-due{background:#fff3cd;color:#856404;padding:2px 8px;border-radius:10px;font-size:12px;font-weight:bold;}
+    .modal-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.45);z-index:100;justify-content:center;align-items:flex-start;overflow-y:auto;padding:20px 10px;}
+    .modal-overlay.show{display:flex;}
+    .modal{background:white;padding:22px;border-radius:10px;width:640px;max-width:98%;margin:auto;}
+    .modal h3{color:#28a745;margin-bottom:14px;}
+  
+    /* Half A4 print */
+    @media print {
+      @page {
+        size: A5 landscape;
+        margin: 8mm;
+      }
+      body * { visibility: hidden; }
+      #invoiceArea, #invoiceArea * { visibility: visible; }
+      #invoiceArea {
+        position: fixed; top: 0; left: 0;
+        width: 100%; font-size: 11px;
+      }
+      .no-print { display: none !important; }
+      #printArea, #printArea * { visibility: visible; }
+      #printArea {
+        position: fixed; top: 0; left: 0; width: 100%;
+      }
+    }
+
+  
+    .nav a { position: relative; }
+    .key-hint { position:absolute;top:-6px;right:-4px;background:#ff9800;color:white;font-size:9px;padding:1px 4px;border-radius:3px;font-weight:bold; }
+
+  </style>
+</head>
+<body>
+<div class="topbar"><h1>📥 Purchase Bill</h1></div>
+<div class="nav">
+  <a href="index.html">🏠 Home<span class="key-hint">0</span></a>
+  <a href="billing.html">🧾 Billing<span class="key-hint">1</span></a>
+  <a href="quotation.html">📋 Quotation<span class="key-hint">2</span></a>
+  <a href="purchase-bill.html" class="active">📥 Purchase<span class="key-hint">3</span></a>
+  <a href="products.html">📦 Products<span class="key-hint">4</span></a>
+  <a href="customers.html">👤 Customers<span class="key-hint">5</span></a>
+  <a href="suppliers.html">🏭 Suppliers<span class="key-hint">6</span></a>
+  <a href="expenses.html">💸 Expenses<span class="key-hint">7</span></a>
+  <a href="reports.html">📊 Reports<span class="key-hint">8</span></a>
+  <a href="retrieve-bill.html">🔍 Find Bill<span class="key-hint">9</span></a>
+</div>
+
+<div class="container">
+  <div class="card">
+    <h2 style="margin-bottom:14px;color:#28a745;">📥 Create Purchase Bill</h2>
+
+    <div class="row">
+      <!-- Supplier search dropdown -->
+      <div class="f" style="flex:1;">
+        <label>Supplier * (type to search)</label>
+        <div class="supp-wrap">
+          <input id="suppSearch" placeholder="Type supplier name..." oninput="onSuppSearch()" onkeydown="suppDropKey(event)" autocomplete="off">
+          <div class="supp-drop" id="suppDrop"></div>
+        </div>
+        <div id="suppSelected" class="selected-tag"></div>
+        <input type="hidden" id="suppId">
+        <button onclick="clearSupplier()" id="clearSuppBtn" style="display:none;margin-top:4px;padding:3px 10px;font-size:12px;background:#dc3545;width:auto;">✕ Clear</button>
+      </div>
+      <div class="f" style="width:140px;">
+        <label>Payment Mode</label>
+        <select id="payMode" onchange="toggleInitialPay()">
+          <option value="Cash">Cash</option>
+          <option value="UPI">UPI</option>
+          <option value="CREDIT">Credit</option>
+        </select>
+      </div>
+      <div class="f" style="width:150px;">
+        <label>Bill Date</label>
+        <input type="date" id="billDate">
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="f" id="initialPayWrap" style="display:none;width:200px;">
+        <label>Initial Payment ₹</label>
+        <input type="number" id="initialPay" placeholder="Leave blank = full paid">
+      </div>
+      <div class="f" style="flex:1;">
+        <label>Note (optional)</label>
+        <input id="billNote" placeholder="e.g. Invoice #123">
+      </div>
+    </div>
+
+    <div style="overflow-x:auto;">
+      <table class="items-table">
+        <thead>
+          <tr>
+            <th style="width:32px;">#</th>
+            <th style="width:100px;">Product Code</th>
+            <th style="width:160px;">Product Name</th>
+            <th style="width:58px;">Qty</th>
+            <th style="width:80px;">Purchase ₹</th>
+            <th style="width:80px;">Selling ₹</th>
+            <th style="width:60px;">Min Stock</th>
+            <th style="width:85px;">Total ₹</th>
+            <th style="width:36px;">✕</th>
+          </tr>
+        </thead>
+        <tbody id="itemsBody"></tbody>
+      </table>
+    </div>
+
+    <div style="margin-top:12px;display:flex;gap:8px;">
+      <button onclick="addItemRow()" class="blue">➕ Add Item</button>
+      <button onclick="submitPurchaseBill()">✅ Save Purchase Bill</button>
+    </div>
+    <div class="grand-total" id="grandTotal">Total: ₹0.00</div>
+  </div>
+
+  <!-- Purchase History -->
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+      <h3>📋 Purchase History</h3>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;">
+        <!-- Supplier filter search -->
+        <div style="position:relative;">
+          <input id="filterSuppSearch" placeholder="Filter by supplier..." oninput="onFilterSuppSearch()" autocomplete="off" style="width:190px;">
+          <div id="filterSuppDrop" style="position:absolute;top:100%;left:0;width:100%;background:white;border:1px solid #aaa;border-radius:6px;max-height:160px;overflow-y:auto;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,0.15);display:none;"></div>
+        </div>
+        <input type="hidden" id="filterSuppId">
+        <input type="month" id="filterMonth" onchange="loadHistory()" style="width:150px;">
+        <button class="blue" onclick="loadHistory()" style="padding:7px 14px;">Filter</button>
+        <button onclick="clearHistoryFilter()" style="background:#888;padding:7px 14px;">All</button>
+      </div>
+    </div>
+    <div style="overflow-x:auto;">
+      <table class="hist-table">
+        <thead><tr><th>PB No</th><th>Date</th><th>Supplier</th><th>Payment</th><th>Total</th><th>Paid</th><th>Balance</th><th>Action</th></tr></thead>
+        <tbody id="histBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Detail Modal -->
+<div class="modal-overlay" id="detailModal">
+  <div class="modal">
+    <h3 id="modalTitle">Purchase Bill</h3>
+    <div id="modalContent"></div>
+    <div style="background:#f0fff4;border:1px solid #28a745;border-radius:8px;padding:14px;margin-top:14px;" id="paySection">
+      <h4 style="color:#1a6e30;margin-bottom:10px;">💳 Record Payment to Supplier</h4>
+      <div class="row">
+        <div class="f"><label>Amount ₹</label><input type="number" id="payAmt" placeholder="0.00"></div>
+        <div class="f"><label>Date</label><input type="date" id="payDateInput"></div>
+        <div class="f"><label>Note</label><input id="payNote" placeholder="Optional"></div>
+      </div>
+      <button onclick="submitPayment()">💾 Record Payment</button>
+    </div>
+    <div style="margin-top:14px;text-align:right;">
+      <button class="danger" onclick="closeModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Product search dropdown portal -->
+<div class="prod-drop" id="prodDrop"></div>
+
+<script>
+const API = `${window.location.protocol}//${window.location.hostname}:3000`;
+if(!sessionStorage.getItem("loggedIn")) window.location.href = "login.html";
+
+let rowCount = 0;
+let allProducts = [];
+let allSuppliers = [];
+let currentPbId = null;
+let currentSupplierId = null;
+let activeInput = null;
+let activeRow = null;
+let dropIdx = -1;
+let suppIdx = -1;
+
+window.addEventListener("DOMContentLoaded", ()=>{
+  document.getElementById("billDate").value = new Date().toISOString().split("T")[0];
+  document.getElementById("payDateInput").value = new Date().toISOString().split("T")[0];
+  const now = new Date();
+  document.getElementById("filterMonth").value = now.getFullYear()+"-"+(String(now.getMonth()+1).padStart(2,"0"));
+
+  fetch(API+"/products").then(r=>r.json()).then(data=>{ allProducts=data; });
+  loadSuppliers();
+  loadHistory();
+  addItemRow();
+
+  // Close dropdowns on outside click
+  document.addEventListener("mousedown", e=>{
+    // Supplier search
+    const sd = document.getElementById("suppDrop");
+    if(sd && !sd.contains(e.target) && e.target !== document.getElementById("suppSearch")) sd.style.display="none";
+    // Filter supplier search
+    const fd = document.getElementById("filterSuppDrop");
+    if(fd && !fd.contains(e.target) && e.target !== document.getElementById("filterSuppSearch")) fd.style.display="none";
+    // Product drop
+    const pd = document.getElementById("prodDrop");
+    if(pd && !pd.contains(e.target) && e.target !== activeInput) pd.classList.remove("open");
+  });
+});
+
+// ── SUPPLIER SEARCH ────────────────────────────────────
+function loadSuppliers(){
+  fetch(API+"/suppliers").then(r=>r.json()).then(data=>{ allSuppliers=data; });
+}
+
+function onSuppSearch(){
+  const q = document.getElementById("suppSearch").value.trim().toLowerCase();
+  const drop = document.getElementById("suppDrop");
+  if(q.length < 1){ drop.style.display="none"; return; }
+  const matches = allSuppliers.filter(s=>s.name.toLowerCase().includes(q)||(s.phone||"").includes(q)).slice(0,10);
+  if(!matches.length){ drop.style.display="none"; return; }
+  drop.innerHTML = matches.map(s=>{
+    const bal = parseFloat(s.balance)||0;
+    return `<div class="supp-drop-item" onmousedown="pickSupplier(${s.supplier_id},'${s.name.replace(/'/g,"\\'")}',${bal})">
+      <b>${s.name}</b>${s.phone?" | "+s.phone:""}${bal>0?` <span style="color:#dc3545;font-size:11px;">(Due ₹${bal.toFixed(2)})</span>`:""}
+    </div>`;
+  }).join("");
+  drop.style.display="block";
+}
+
+function suppDropKey(e){
+  const drop=document.getElementById("suppDrop");
+  const items=drop.querySelectorAll(".supp-drop-item");
+  if(!items.length||drop.style.display==="none"){
+    if(e.key==="Enter"){e.preventDefault();}
+    return;
+  }
+  if(e.key==="ArrowDown"){e.preventDefault();suppIdx=Math.min(suppIdx+1,items.length-1);hlSupp(items);return;}
+  if(e.key==="ArrowUp"){e.preventDefault();suppIdx=Math.max(suppIdx-1,0);hlSupp(items);return;}
+  if(e.key==="Enter"&&suppIdx>=0){e.preventDefault();items[suppIdx].dispatchEvent(new MouseEvent("mousedown",{bubbles:true}));return;}
+  if(e.key==="Escape"){drop.style.display="none";suppIdx=-1;}
+}
+function hlSupp(items){items.forEach((el,i)=>el.classList.toggle("dp-active",i===suppIdx));if(items[suppIdx])items[suppIdx].scrollIntoView({block:"nearest"});}
+
+function pickSupplier(id, name, bal){
+  document.getElementById("suppId").value = id;
+  document.getElementById("suppSearch").value = name;
+  document.getElementById("suppSelected").innerText = "✅ "+name+(bal>0?" | Due: ₹"+bal.toFixed(2):"");
+  document.getElementById("suppDrop").style.display="none";
+  document.getElementById("clearSuppBtn").style.display="inline-block";
+  suppIdx=-1;
+}
+
+function clearSupplier(){
+  document.getElementById("suppId").value="";
+  document.getElementById("suppSearch").value="";
+  document.getElementById("suppSelected").innerText="";
+  document.getElementById("clearSuppBtn").style.display="none";
+}
+
+// Filter supplier search (in history)
+function onFilterSuppSearch(){
+  const q = document.getElementById("filterSuppSearch").value.trim().toLowerCase();
+  const drop = document.getElementById("filterSuppDrop");
+  if(q.length < 1){ drop.style.display="none"; document.getElementById("filterSuppId").value=""; return; }
+  const matches = allSuppliers.filter(s=>s.name.toLowerCase().includes(q)).slice(0,10);
+  if(!matches.length){ drop.style.display="none"; return; }
+  drop.innerHTML = matches.map(s=>`
+    <div style="padding:8px 12px;cursor:pointer;border-bottom:1px solid #f0f0f0;font-size:13px;"
+      onmousedown="pickFilterSupp(${s.supplier_id},'${s.name.replace(/'/g,"\\'")}')">
+      ${s.name}
+    </div>`).join("");
+  drop.style.display="block";
+}
+
+function pickFilterSupp(id, name){
+  document.getElementById("filterSuppId").value = id;
+  document.getElementById("filterSuppSearch").value = name;
+  document.getElementById("filterSuppDrop").style.display="none";
+  loadHistory();
+}
+
+function clearHistoryFilter(){
+  document.getElementById("filterSuppId").value="";
+  document.getElementById("filterSuppSearch").value="";
+  document.getElementById("filterMonth").value="";
+  loadHistory();
+}
+
+function toggleInitialPay(){
+  document.getElementById("initialPayWrap").style.display =
+    document.getElementById("payMode").value==="CREDIT"?"flex":"none";
+}
+
+// ── PRODUCT SEARCH ─────────────────────────────────────
+function showProdDrop(inputEl, rowId, fieldType){
+  activeInput=inputEl; activeRow=rowId; dropIdx=-1;
+  const q=inputEl.value.trim().toLowerCase();
+  const drop=document.getElementById("prodDrop");
+  if(q.length<1){drop.classList.remove("open");return;}
+  const matches=(fieldType==="code"
+    ?allProducts.filter(p=>(p.product_code||"").toLowerCase().includes(q))
+    :allProducts.filter(p=>p.name.toLowerCase().includes(q))
+  ).slice(0,10);
+  if(!matches.length){drop.classList.remove("open");return;}
+  drop.innerHTML=matches.map(p=>`
+    <div class="prod-drop-item" onmousedown="pickProduct(event,${p.product_id},'${esc(p.name)}','${esc(p.product_code||"")}')">
+      <div class="pdi-code">${p.product_code||"(no code)"}</div>
+      <div class="pdi-name">${p.name}${p.brand?" — "+p.brand:""}</div>
+    </div>`).join("");
+  const rect=inputEl.getBoundingClientRect();
+  drop.style.top=(rect.bottom+window.scrollY+2)+"px";
+  drop.style.left=(rect.left+window.scrollX)+"px";
+  drop.style.width=Math.max(rect.width,220)+"px";
+  drop.classList.add("open");
+}
+
+function esc(s){return (s||"").replace(/'/g,"\\'").replace(/"/g,'\\"');}
+
+function pickProduct(e, pid, name, code){
+  e.preventDefault();
+  const id=activeRow;
+  document.getElementById("pcode_"+id).value=code;
+  document.getElementById("pname_"+id).value=name;
+  document.getElementById("ppid_"+id).value=pid;
+  document.getElementById("isNew_"+id).value="0";
+  document.getElementById("newBox_"+id).style.display="none";
+  document.getElementById("selTag_"+id).innerText="✅ "+name;
+  document.getElementById("prodDrop").classList.remove("open");
+  setTimeout(()=>{ const q=document.getElementById("pqty_"+id); if(q) q.focus(); },50);
+}
+
+// ── ITEM ROWS ──────────────────────────────────────────
+function addItemRow(){
+  rowCount++;
+  const id=rowCount;
+  const tr=document.createElement("tr");
+  tr.id="row_"+id;
+  tr.innerHTML=`
+    <td>${id}</td>
+    <td>
+      <input id="pcode_${id}" placeholder="Code"
+        oninput="showProdDrop(this,${id},'code')" onfocus="showProdDrop(this,${id},'code')"
+        onkeydown="handleProdKey(event,${id},'code')" autocomplete="off">
+    </td>
+    <td>
+      <input id="pname_${id}" placeholder="Name"
+        oninput="showProdDrop(this,${id},'name')" onfocus="showProdDrop(this,${id},'name')"
+        onkeydown="handleProdKey(event,${id},'name')" autocomplete="off">
+      <input type="hidden" id="ppid_${id}">
+      <input type="hidden" id="isNew_${id}" value="0">
+      <div class="selected-tag" id="selTag_${id}"></div>
+      <div class="new-prod-box" id="newBox_${id}">
+        <div style="font-size:11px;color:#1a6e30;font-weight:bold;margin-bottom:5px;">➕ New Product</div>
+        <input id="newName_${id}" placeholder="Name *" style="margin-bottom:3px;font-size:12px;">
+        <input id="newBrand_${id}" placeholder="Brand" style="margin-bottom:3px;font-size:12px;">
+        <input id="newHsn_${id}" placeholder="HSN" style="font-size:12px;">
+      </div>
+    </td>
+    <td><input type="number" id="pqty_${id}" value="1" min="1" style="width:55px;" oninput="recalcRow(${id})" onkeydown="if(event.key==='Enter'){event.preventDefault();document.getElementById('ppp_'+${id}).focus();}"></td>
+    <td><input type="number" id="ppp_${id}" placeholder="0.00" oninput="recalcRow(${id})" onkeydown="if(event.key==='Enter'){event.preventDefault();document.getElementById('psp_'+${id}).focus();}"></td>
+    <td><input type="number" id="psp_${id}" placeholder="0.00" onkeydown="if(event.key==='Enter'){event.preventDefault();addItemRow();}"></td>
+    <td><input type="number" id="pms_${id}" value="5" style="width:50px;"></td>
+    <td><input type="number" id="ptotal_${id}" placeholder="0.00" readonly style="background:#f8f9fa;"></td>
+    <td><button class="danger" onclick="removeRow(${id})" style="padding:3px 7px;font-size:11px;">✕</button></td>
+  `;
+  document.getElementById("itemsBody").appendChild(tr);
+  document.getElementById("pcode_"+id).focus();
+
+  // If no match on blur, show new product option
+  document.getElementById("pname_"+id).addEventListener("blur", ()=>{
+    setTimeout(()=>{
+      const pid = document.getElementById("ppid_"+id).value;
+      const name = document.getElementById("pname_"+id).value.trim();
+      if(!pid && name && document.getElementById("isNew_"+id).value!=="1"){
+        // Show new product box
+        document.getElementById("isNew_"+id).value="1";
+        document.getElementById("newBox_"+id).style.display="block";
+        document.getElementById("newName_"+id).value=name;
+        document.getElementById("pcode_"+id).value=name.substring(0,6).toUpperCase().replace(/\s/g,"");
+        document.getElementById("selTag_"+id).innerText="🆕 New product";
+      }
+    },250);
+  });
+}
+
+function recalcRow(id){
+  const qty=parseFloat(document.getElementById("pqty_"+id).value)||0;
+  const pp=parseFloat(document.getElementById("ppp_"+id).value)||0;
+  document.getElementById("ptotal_"+id).value=(qty*pp).toFixed(2);
+  updateGrandTotal();
+}
+
+function removeRow(id){ const r=document.getElementById("row_"+id); if(r) r.remove(); updateGrandTotal(); }
+
+function updateGrandTotal(){
+  let t=0;
+  for(let i=1;i<=rowCount;i++){
+    const el=document.getElementById("ptotal_"+i); if(el) t+=parseFloat(el.value)||0;
+  }
+  document.getElementById("grandTotal").innerText="Total: ₹"+t.toFixed(2);
+}
+
+// ── SUBMIT PURCHASE BILL ───────────────────────────────
+async function submitPurchaseBill(){
+  const supplier_id = document.getElementById("suppId").value;
+  const payment_mode = document.getElementById("payMode").value;
+  const bill_date = document.getElementById("billDate").value;
+  const note = document.getElementById("billNote").value;
+  const initial_payment = document.getElementById("initialPay").value;
+
+  if(!supplier_id){ alert("Select a supplier"); return; }
+  if(!bill_date){ alert("Select bill date"); return; }
+
+  const items=[];
+  for(let i=1;i<=rowCount;i++){
+    const el=document.getElementById("row_"+i); if(!el) continue;
+    const qty=parseInt(document.getElementById("pqty_"+i).value)||0;
+    const pp=parseFloat(document.getElementById("ppp_"+i).value)||0;
+    const sp=parseFloat(document.getElementById("psp_"+i).value)||0;
+    const ms=parseInt(document.getElementById("pms_"+i).value)||5;
+    const isNew=document.getElementById("isNew_"+i).value==="1";
+    if(qty<=0){ alert("Enter quantity for row "+i); return; }
+    if(pp<=0){ alert("Enter purchase price for row "+i); return; }
+    if(sp<=0){ alert("Enter selling price for row "+i); return; }
+
+    let product_id=document.getElementById("ppid_"+i).value;
+
+    if(isNew){
+      const newName=document.getElementById("newName_"+i).value.trim();
+      const newBrand=document.getElementById("newBrand_"+i).value.trim();
+      const newHsn=document.getElementById("newHsn_"+i).value.trim();
+      const code=document.getElementById("pcode_"+i).value.trim();
+      if(!newName){ alert("Enter product name for new product in row "+i); return; }
+      try{
+        const resp=await fetch(API+"/products",{method:"POST",headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({name:newName,brand:newBrand,hsn_code:newHsn,product_code:code})});
+        const d=await resp.json();
+        if(d.error){ alert("Error creating product: "+d.error); return; }
+        product_id=d.product_id;
+        allProducts.push({product_id,name:newName,brand:newBrand,product_code:code});
+      }catch(e){ alert("Network error: "+e.message); return; }
+    }
+
+    if(!product_id){ alert("Product not found for row "+i+". Please search and select a product."); return; }
+    items.push({product_id,quantity:qty,purchase_price:pp,selling_price:sp,min_stock:ms});
+  }
+
+  if(!items.length){ alert("Add at least one item"); return; }
+
+  fetch(API+"/create-purchase-bill",{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({supplier_id,bill_date,payment_mode,items,note,initial_payment:parseFloat(initial_payment)||null})})
+  .then(r=>r.json())
+  .then(d=>{
+    if(d.error){ alert("Error: "+d.error); return; }
+    alert(`✅ Purchase bill saved!\nTotal: ₹${d.total_amount.toFixed(2)}\nPaid: ₹${d.paid_amount.toFixed(2)}\nBalance: ₹${d.balance.toFixed(2)}`);
+    // Reset form
+    document.getElementById("itemsBody").innerHTML="";
+    clearSupplier();
+    document.getElementById("payMode").value="Cash";
+    document.getElementById("billNote").value="";
+    document.getElementById("initialPay").value="";
+    document.getElementById("grandTotal").innerText="Total: ₹0.00";
+    rowCount=0;
+    addItemRow();
+    loadSuppliers();
+    loadHistory();
+  })
+  .catch(err=>alert("Network error: "+err.message));
+}
+
+// ── HISTORY ────────────────────────────────────────────
+function loadHistory(){
+  const suppId=document.getElementById("filterSuppId").value;
+  const month=document.getElementById("filterMonth").value;
+  fetch(API+"/purchase-bills").then(r=>r.json()).then(data=>{
+    let filtered=data;
+    if(suppId) filtered=filtered.filter(b=>b.supplier_id==suppId);
+    if(month){
+      const [yr,mo]=month.split("-");
+      filtered=filtered.filter(b=>{ const d=new Date(b.bill_date); return d.getFullYear()==yr&&(d.getMonth()+1)==parseInt(mo); });
+    }
+    const tbody=document.getElementById("histBody");
+    tbody.innerHTML="";
+    if(!filtered.length){ tbody.innerHTML=`<tr><td colspan="8" style="color:#888;">No purchase bills found</td></tr>`; return; }
+    filtered.forEach(b=>{
+      const bal=parseFloat(b.balance)||0;
+      tbody.innerHTML+=`<tr>
+        <td>PB-${b.pb_id}</td>
+        <td>${new Date(b.bill_date).toLocaleDateString("en-IN")}</td>
+        <td>${b.supplier_name||"-"}</td>
+        <td>${b.payment_mode}</td>
+        <td>₹${parseFloat(b.total_amount).toFixed(2)}</td>
+        <td style="color:#28a745;">₹${parseFloat(b.paid_amount).toFixed(2)}</td>
+        <td>${bal>0?`<span class="badge-due">₹${bal.toFixed(2)}</span>`:"✅ Paid"}</td>
+        <td><button class="blue" onclick="viewBill(${b.pb_id},${b.supplier_id||0})" style="padding:4px 10px;font-size:12px;">View</button></td>
+      </tr>`;
+    });
+  });
+}
+
+function viewBill(pb_id, supplier_id){
+  currentPbId=pb_id; currentSupplierId=supplier_id;
+  fetch(API+"/purchase-bill/"+pb_id).then(r=>r.json()).then(b=>{
+    document.getElementById("modalTitle").innerText="PB-"+b.pb_id+" — "+(b.supplier_name||"Supplier");
+    const bal=parseFloat(b.balance)||0;
+    const itemRows=b.items.map((item,i)=>`<tr>
+      <td>${i+1}</td>
+      <td style="text-align:left;">${item.product_name||"-"}${item.product_code?" ("+item.product_code+")":""}</td>
+      <td>${item.quantity}</td>
+      <td>₹${parseFloat(item.purchase_price).toFixed(2)}</td>
+      <td>₹${parseFloat(item.selling_price).toFixed(2)}</td>
+      <td>₹${(parseFloat(item.purchase_price)*item.quantity).toFixed(2)}</td>
+    </tr>`).join("");
+    const payRows=b.payments&&b.payments.length
+      ?b.payments.map(p=>`<tr>
+          <td>${new Date(p.payment_date).toLocaleDateString("en-IN")}</td>
+          <td style="color:#28a745;font-weight:bold;">₹${parseFloat(p.amount).toFixed(2)}</td>
+          <td>${p.note||"-"}</td>
+        </tr>`).join("")
+      :`<tr><td colspan="3" style="color:#888;">No payments yet</td></tr>`;
+    document.getElementById("modalContent").innerHTML=`
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;">
+        <div style="background:#f8f9fa;padding:10px 14px;border-radius:8px;flex:1;text-align:center;">
+          <div style="font-size:12px;color:#888;">Total</div>
+          <div style="font-size:17px;font-weight:bold;">₹${parseFloat(b.total_amount).toFixed(2)}</div>
+        </div>
+        <div style="background:#e8f7ef;padding:10px 14px;border-radius:8px;flex:1;text-align:center;">
+          <div style="font-size:12px;color:#888;">Paid</div>
+          <div style="font-size:17px;font-weight:bold;color:#28a745;">₹${parseFloat(b.paid_amount).toFixed(2)}</div>
+        </div>
+        <div style="background:${bal>0?"#fff3cd":"#e8f7ef"};padding:10px 14px;border-radius:8px;flex:1;text-align:center;">
+          <div style="font-size:12px;color:#888;">Balance</div>
+          <div style="font-size:17px;font-weight:bold;color:${bal>0?"#856404":"#28a745"};">₹${bal.toFixed(2)}</div>
+        </div>
+      </div>
+      <h4 style="margin-bottom:8px;">Items</h4>
+      <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:12px;">
+        <thead style="background:#f0f4f8;"><tr><th style="padding:6px;">#</th><th>Product</th><th>Qty</th><th>Purchase ₹</th><th>Selling ₹</th><th>Total ₹</th></tr></thead>
+        <tbody>${itemRows}</tbody>
+      </table>
+      <h4 style="margin-bottom:8px;">Payment History</h4>
+      <table style="width:100%;border-collapse:collapse;font-size:13px;">
+        <thead style="background:#f0f4f8;"><tr><th style="padding:6px;">Date</th><th>Amount</th><th>Note</th></tr></thead>
+        <tbody>${payRows}</tbody>
+      </table>`;
+    document.getElementById("paySection").style.display=bal>0?"block":"none";
+    document.getElementById("detailModal").classList.add("show");
+  });
+}
+
+function submitPayment(){
+  const amount=parseFloat(document.getElementById("payAmt").value);
+  const date=document.getElementById("payDateInput").value;
+  const note=document.getElementById("payNote").value;
+  if(!amount||amount<=0){ alert("Enter valid amount"); return; }
+  fetch(API+"/supplier-payment",{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({supplier_id:currentSupplierId,pb_id:currentPbId,amount,payment_date:date,note})})
+  .then(r=>r.json()).then(d=>{
+    if(d.error){ alert("Error: "+d.error); return; }
+    alert("✅ Payment recorded!");
+    document.getElementById("payAmt").value="";
+    document.getElementById("payNote").value="";
+    loadSuppliers(); loadHistory();
+    viewBill(currentPbId,currentSupplierId);
+  });
+}
+
+function closeModal(){
+  document.getElementById("detailModal").classList.remove("show");
+  currentPbId=null; currentSupplierId=null;
+}
+
+// ESC key → back to dashboard
+document.addEventListener("keydown", e=>{
+  if(e.key === "Escape") window.location.href = "index.html";
+});
+
+// ── KEYBOARD NAVIGATION ───────────────────────────────
+document.addEventListener("keydown", function(e){
+  // ESC = go to dashboard
+  if(e.key === "Escape"){ window.location.href = "index.html"; return; }
+
+  // Ctrl+F10 = unlock profit (only on pages that have it)
+  if(e.ctrlKey && e.key === "F10"){
+    e.preventDefault();
+    if(typeof revealProfit === "function") revealProfit();
+    return;
+  }
+
+  // Number keys 0-9 = quick navigate (only when not in an input)
+  const tag = document.activeElement ? document.activeElement.tagName : "";
+  if(tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+
+  const pages = {
+    "0":"index.html","1":"billing.html","2":"quotation.html",
+    "3":"purchase-bill.html","4":"products.html","5":"customers.html",
+    "6":"suppliers.html","7":"expenses.html","8":"reports.html","9":"retrieve-bill.html"
+  };
+  if(pages[e.key]){ e.preventDefault(); window.location.href = pages[e.key]; }
+});
+
+</script>
+</body>
+</html>

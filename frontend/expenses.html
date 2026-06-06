@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Expenses</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:Arial,sans-serif;background:#f0f4f8;}
+    .topbar{background:#dc3545;color:white;padding:14px 24px;}
+    .topbar h1{font-size:20px;}
+    .nav{background:white;display:flex;gap:8px;padding:10px 20px;box-shadow:0 2px 6px rgba(0,0,0,0.08);flex-wrap:wrap;}
+    .nav a{text-decoration:none;background:#007bff;color:white;padding:7px 14px;border-radius:6px;font-size:13px;position:relative;}
+    .nav a:hover,.nav a.active{background:#0056b3;}
+    .key-hint{position:absolute;top:-6px;right:-4px;background:#ff9800;color:white;font-size:9px;padding:1px 4px;border-radius:3px;font-weight:bold;}
+    .container{padding:18px 24px;max-width:960px;}
+    .card{background:white;padding:18px;border-radius:10px;margin-bottom:16px;box-shadow:0 2px 8px rgba(0,0,0,0.08);}
+    label{font-size:13px;color:#555;font-weight:bold;display:block;margin-bottom:3px;}
+    input,select{padding:7px 9px;border:1px solid #ccc;border-radius:5px;font-size:13px;outline:none;width:100%;}
+    input:focus,select:focus{border-color:#dc3545;}
+    button{background:#dc3545;color:white;border:none;padding:8px 16px;border-radius:5px;cursor:pointer;font-size:13px;font-weight:bold;}
+    button:hover{background:#a71d2a;}
+    button.blue{background:#007bff;}button.blue:hover{background:#0056b3;}
+    button.success{background:#28a745;}button.success:hover{background:#1a6e30;}
+    button.warn{background:#fd7e14;}button.warn:hover{background:#c96a00;}
+    button.grey{background:#6c757d;}button.grey:hover{background:#545b62;}
+    .row{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:10px;}
+    .f{display:flex;flex-direction:column;gap:3px;}
+    table{width:100%;border-collapse:collapse;}
+    th{background:#dc3545;color:white;padding:8px;font-size:13px;}
+    td{padding:8px;border:1px solid #eee;font-size:13px;text-align:center;}
+    .total-box{background:linear-gradient(135deg,#dc3545,#c82333);color:white;padding:16px 24px;border-radius:10px;font-size:20px;font-weight:bold;text-align:center;margin-bottom:16px;box-shadow:0 4px 12px rgba(220,53,69,0.4);}
+    .total-box span{font-size:13px;opacity:0.85;display:block;margin-bottom:4px;}
+    .modal-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.45);z-index:100;justify-content:center;align-items:center;}
+    .modal-overlay.show{display:flex;}
+    .modal{background:white;padding:22px;border-radius:10px;width:500px;max-width:98%;}
+    .cat-badge{background:#e8f4fd;color:#007bff;padding:2px 8px;border-radius:10px;font-size:12px;}
+  </style>
+</head>
+<body>
+<div class="topbar"><h1>💸 Expenses</h1></div>
+<div class="nav">
+  <a href="index.html">🏠 Home<span class="key-hint">0</span></a>
+  <a href="billing.html">🧾 Billing<span class="key-hint">1</span></a>
+  <a href="quotation.html">📋 Quotation<span class="key-hint">2</span></a>
+  <a href="purchase-bill.html">📥 Purchase<span class="key-hint">3</span></a>
+  <a href="products.html">📦 Products<span class="key-hint">4</span></a>
+  <a href="customers.html">👤 Customers<span class="key-hint">5</span></a>
+  <a href="suppliers.html">🏭 Suppliers<span class="key-hint">6</span></a>
+  <a href="expenses.html" class="active">💸 Expenses<span class="key-hint">7</span></a>
+  <a href="reports.html">📊 Reports<span class="key-hint">8</span></a>
+  <a href="retrieve-bill.html">🔍 Find Bill<span class="key-hint">9</span></a>
+</div>
+
+<div class="container">
+  <!-- Total Highlighted -->
+  <div class="total-box" id="totalBox">
+    <span>Total Expenses (filtered)</span>
+    ₹0.00
+  </div>
+
+  <!-- Add Expense -->
+  <div class="card">
+    <h3 style="margin-bottom:12px;">➕ Add Expense</h3>
+    <div class="row">
+      <div class="f" style="flex:1;"><label>Title *</label><input id="etitle" placeholder="e.g. Rent, Electricity"></div>
+      <div class="f" style="width:160px;"><label>Amount ₹ *</label><input type="number" id="eamount" placeholder="0.00"></div>
+      <div class="f" style="width:160px;"><label>Date</label><input type="date" id="edate"></div>
+    </div>
+    <div class="row">
+      <div class="f" style="width:180px;">
+        <label>Category</label>
+        <input id="ecategory" list="catList" placeholder="Select or type...">
+        <datalist id="catList">
+          <option value="Rent">
+          <option value="Electricity">
+          <option value="Salary">
+          <option value="Transport">
+          <option value="Maintenance">
+          <option value="Stationery">
+          <option value="Telephone">
+          <option value="Miscellaneous">
+          <option value="SUN AUTO">
+        </datalist>
+      </div>
+      <div class="f" style="flex:1;"><label>Note</label><input id="enote" placeholder="Optional note"></div>
+      <div class="f"><label>&nbsp;</label><button onclick="addExpense()">Add Expense</button></div>
+    </div>
+  </div>
+
+  <!-- Filter -->
+  <div class="card">
+    <h3 style="margin-bottom:12px;">🔍 Filter Expenses</h3>
+    <div class="row">
+      <div class="f" style="width:160px;"><label>From Date</label><input type="date" id="fFrom"></div>
+      <div class="f" style="width:160px;"><label>To Date</label><input type="date" id="fTo"></div>
+      <div class="f" style="width:180px;">
+        <label>Category</label>
+        <select id="fCategory">
+          <option value="">All Categories</option>
+          <option>Rent</option><option>Electricity</option><option>Salary</option>
+          <option>Transport</option><option>Maintenance</option><option>Stationery</option>
+          <option>Telephone</option><option>Miscellaneous</option><option>SUN AUTO</option>
+        </select>
+      </div>
+      <div class="f"><label>&nbsp;</label><button class="blue" onclick="loadExpenses()">Filter</button></div>
+      <div class="f"><label>&nbsp;</label><button class="grey" onclick="clearFilter()">Clear</button></div>
+    </div>
+  </div>
+
+  <!-- Expense List -->
+  <div class="card">
+    <h3 style="margin-bottom:12px;">Expense List</h3>
+    <div style="overflow-x:auto;">
+      <table>
+        <thead><tr><th>Date</th><th>Title</th><th>Category</th><th>Amount ₹</th><th>Note</th><th>Actions</th></tr></thead>
+        <tbody id="expBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Modal -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal">
+    <h3 style="margin-bottom:14px;color:#dc3545;">✏️ Edit Expense</h3>
+    <div class="row">
+      <div class="f" style="flex:1;"><label>Title *</label><input id="meTitle"></div>
+      <div class="f" style="width:140px;"><label>Amount ₹</label><input type="number" id="meAmount"></div>
+    </div>
+    <div class="row">
+      <div class="f" style="width:160px;"><label>Date</label><input type="date" id="meDate"></div>
+      <div class="f" style="width:180px;">
+        <label>Category</label>
+        <input id="meCategory" list="catList2" placeholder="Category">
+        <datalist id="catList2">
+          <option value="Rent"><option value="Electricity"><option value="Salary">
+          <option value="Transport"><option value="Maintenance"><option value="Stationery">
+          <option value="Telephone"><option value="Miscellaneous"><option value="SUN AUTO">
+        </datalist>
+      </div>
+    </div>
+    <div class="f" style="margin-bottom:12px;"><label>Note</label><input id="meNote"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;">
+      <button class="success" onclick="saveEdit()">💾 Save</button>
+      <button onclick="closeEdit()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const API=`${window.location.protocol}//${window.location.hostname}:3000`;
+if(!sessionStorage.getItem("loggedIn"))window.location.href="login.html";
+
+let editingId=null;
+
+window.addEventListener("DOMContentLoaded",()=>{
+  document.getElementById("edate").value=new Date().toISOString().split("T")[0];
+  // Default filter: current month
+  const now=new Date();
+  const y=now.getFullYear();const m=String(now.getMonth()+1).padStart(2,"0");
+  document.getElementById("fFrom").value=`${y}-${m}-01`;
+  document.getElementById("fTo").value=now.toISOString().split("T")[0];
+  loadExpenses();
+});
+
+function addExpense(){
+  const title=document.getElementById("etitle").value.trim();
+  const amount=document.getElementById("eamount").value;
+  if(!title||!amount){alert("Enter title and amount");return;}
+  fetch(API+"/add-expense",{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({title,amount:parseFloat(amount),expense_date:document.getElementById("edate").value,category:document.getElementById("ecategory").value||"General",note:document.getElementById("enote").value})})
+  .then(r=>r.json()).then(d=>{
+    if(d.error){alert("Error: "+d.error);return;}
+    ["etitle","eamount","enote"].forEach(id=>document.getElementById(id).value="");
+    document.getElementById("ecategory").value="";
+    loadExpenses();
+  });
+}
+
+function loadExpenses(){
+  const from=document.getElementById("fFrom").value;
+  const to=document.getElementById("fTo").value;
+  const cat=document.getElementById("fCategory").value;
+  let url=API+"/expenses-range?";
+  if(from)url+="from_date="+from+"&";
+  if(to)url+="to_date="+to+"&";
+  if(cat)url+="category="+encodeURIComponent(cat);
+
+  fetch(url).then(r=>r.json()).then(data=>{
+    const tbody=document.getElementById("expBody");
+    tbody.innerHTML="";
+    let total=0;
+    if(!data.length){tbody.innerHTML=`<tr><td colspan="6" style="color:#888;">No expenses found</td></tr>`;document.getElementById("totalBox").innerHTML=`<span>Total Expenses (filtered)</span>₹0.00`;return;}
+    data.forEach(e=>{
+      total+=parseFloat(e.amount)||0;
+      tbody.innerHTML+=`<tr>
+        <td>${new Date(e.expense_date).toLocaleDateString("en-IN")}</td>
+        <td style="text-align:left;font-weight:bold;">${e.title}</td>
+        <td><span class="cat-badge">${e.category||"General"}</span></td>
+        <td style="color:#dc3545;font-weight:bold;">₹${parseFloat(e.amount).toFixed(2)}</td>
+        <td style="text-align:left;color:#888;">${e.note||"—"}</td>
+        <td>
+          <button class="warn" onclick="openEdit(${e.expense_id},'${(e.title||"").replace(/'/g,"\\'")}',${e.amount},'${e.expense_date}','${e.category||""}','${(e.note||"").replace(/'/g,"\\'")}')">✏️</button>
+          <button onclick="deleteExpense(${e.expense_id})" style="padding:5px 10px;font-size:12px;margin-left:4px;background:#dc3545;">🗑</button>
+        </td>
+      </tr>`;
+    });
+    document.getElementById("totalBox").innerHTML=`<span>Total Expenses (${from||"all"}${to?" → "+to:""}${cat?" | "+cat:""})</span>₹${total.toFixed(2)}`;
+  });
+}
+
+function clearFilter(){
+  document.getElementById("fFrom").value="";
+  document.getElementById("fTo").value="";
+  document.getElementById("fCategory").value="";
+  loadExpenses();
+}
+
+function deleteExpense(id){
+  if(!confirm("Delete this expense?"))return;
+  fetch(API+"/expense/"+id,{method:"DELETE"}).then(()=>loadExpenses());
+}
+
+function openEdit(id,title,amount,date,category,note){
+  editingId=id;
+  document.getElementById("meTitle").value=title;
+  document.getElementById("meAmount").value=amount;
+  document.getElementById("meDate").value=date;
+  document.getElementById("meCategory").value=category;
+  document.getElementById("meNote").value=note;
+  document.getElementById("editModal").classList.add("show");
+}
+function closeEdit(){document.getElementById("editModal").classList.remove("show");editingId=null;}
+function saveEdit(){
+  if(!editingId)return;
+  const title=document.getElementById("meTitle").value.trim();
+  const amount=document.getElementById("meAmount").value;
+  if(!title||!amount){alert("Enter title and amount");return;}
+  fetch(API+"/expense/"+editingId,{method:"PUT",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({title,amount:parseFloat(amount),expense_date:document.getElementById("meDate").value,category:document.getElementById("meCategory").value||"General",note:document.getElementById("meNote").value})})
+  .then(r=>r.json()).then(d=>{
+    if(d.error){alert("Error: "+d.error);return;}
+    closeEdit();loadExpenses();
+  });
+}
+
+document.addEventListener("keydown",e=>{
+  if(e.key==="Escape"){
+    if(document.getElementById("editModal").classList.contains("show")){closeEdit();return;}
+    window.location.href="index.html";return;
+  }
+  const tag=document.activeElement?document.activeElement.tagName:"";
+  if(tag==="INPUT"||tag==="TEXTAREA"||tag==="SELECT")return;
+  const p={"0":"index.html","1":"billing.html","2":"quotation.html","3":"purchase-bill.html","4":"products.html","5":"customers.html","6":"suppliers.html","7":"expenses.html","8":"reports.html","9":"retrieve-bill.html"};
+  if(p[e.key]){e.preventDefault();window.location.href=p[e.key];}
+});
+</script>
+</body>
+</html>
