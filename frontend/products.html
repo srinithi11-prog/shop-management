@@ -31,6 +31,12 @@
     .pagination button{padding:6px 14px;font-size:13px;}
     .pagination span{font-size:13px;color:#555;}
     .worth-badge{background:#e8f7ef;color:#28a745;padding:10px 20px;border-radius:8px;font-size:16px;font-weight:bold;display:inline-block;margin-bottom:16px;}
+    /* Brand dropdown */
+    .brand-wrap{position:relative;}
+    .brand-drop{position:absolute;top:100%;left:0;width:100%;background:white;border:1px solid #aaa;border-radius:6px;max-height:180px;overflow-y:auto;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,0.15);display:none;}
+    .brand-drop.open{display:block;}
+    .brand-drop-item{padding:8px 12px;cursor:pointer;border-bottom:1px solid #f0f0f0;font-size:13px;}
+    .brand-drop-item:hover,.brand-drop-item.dp-active{background:#e8f4fd;}
     .modal-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.45);z-index:100;justify-content:center;align-items:flex-start;overflow-y:auto;padding:20px 10px;}
     .modal-overlay.show{display:flex;}
     .modal{background:white;padding:22px;border-radius:10px;width:600px;max-width:98%;margin:auto;}
@@ -61,7 +67,17 @@
     <div class="row">
       <div class="f"><label>Product Code *</label><input id="pcode" placeholder="e.g. TL001"></div>
       <div class="f" style="flex:1;"><label>Product Name *</label><input id="pname" placeholder="e.g. Floor Tile 60x60"></div>
-      <div class="f"><label>Brand</label><input id="pbrand" placeholder="e.g. Johnson"></div>
+      <div class="f">
+        <label>Brand</label>
+        <div class="brand-wrap">
+          <input id="pbrand" placeholder="Type or select brand..."
+            oninput="showBrandDrop('pbrand','pbrandDrop')"
+            onfocus="showBrandDrop('pbrand','pbrandDrop')"
+            onkeydown="brandDropKey(event,'pbrand','pbrandDrop')"
+            autocomplete="off">
+          <div class="brand-drop" id="pbrandDrop"></div>
+        </div>
+      </div>
       <div class="f"><label>HSN Code</label><input id="phsn" placeholder="e.g. 6907"></div>
     </div>
     <div style="background:#f0f8ff;border:1px solid #007bff;border-radius:8px;padding:14px;margin-bottom:12px;">
@@ -130,7 +146,17 @@
         <div class="f" style="flex:1;"><label>Product Name *</label><input id="ePname"></div>
       </div>
       <div class="row">
-        <div class="f"><label>Brand</label><input id="ePbrand"></div>
+        <div class="f">
+        <label>Brand</label>
+        <div class="brand-wrap">
+          <input id="ePbrand" placeholder="Type or select brand..."
+            oninput="showBrandDrop('ePbrand','ePbrandDrop')"
+            onfocus="showBrandDrop('ePbrand','ePbrandDrop')"
+            onkeydown="brandDropKey(event,'ePbrand','ePbrandDrop')"
+            autocomplete="off">
+          <div class="brand-drop" id="ePbrandDrop"></div>
+        </div>
+      </div>
         <div class="f"><label>HSN Code</label><input id="ePhsn"></div>
       </div>
       <div style="margin-top:10px;display:flex;gap:8px;">
@@ -162,15 +188,96 @@
 </div>
 
 <script>
-const API=`${window.location.protocol}//${window.location.hostname}:3000`;
+const API="http://localhost:3000";
 if(!sessionStorage.getItem("loggedIn"))window.location.href="login.html";
 
 let allProducts=[],filteredProducts=[],currentPage=1,currentModalIdx=0;
 const PAGE_SIZE=10;
 
+// ── BRAND DROPDOWN ────────────────────────────────────
+let allBrands = [];
+let brandDropIdx = {};
+
+function getBrands(){
+  // Extract unique brands from allProducts
+  return [...new Set(allProducts.map(p=>p.brand).filter(Boolean))].sort();
+}
+
+function showBrandDrop(inputId, dropId){
+  const input = document.getElementById(inputId);
+  const drop = document.getElementById(dropId);
+  const q = input.value.trim().toLowerCase();
+  const brands = getBrands();
+  const matches = q.length === 0
+    ? brands
+    : brands.filter(b => b.toLowerCase().includes(q));
+  brandDropIdx[dropId] = -1;
+  if(!matches.length){ drop.classList.remove("open"); return; }
+  drop.innerHTML = matches.map((b,i) => `
+    <div class="brand-drop-item" id="${dropId}_${i}"
+      onmousedown="pickBrand(event,'${inputId}','${dropId}','${b.replace(/'/g,"\'")}')">
+      ${b}
+    </div>`).join("");
+  drop.classList.add("open");
+}
+
+function pickBrand(e, inputId, dropId, brand){
+  e.preventDefault();
+  document.getElementById(inputId).value = brand;
+  document.getElementById(dropId).classList.remove("open");
+  brandDropIdx[dropId] = -1;
+}
+
+function brandDropKey(e, inputId, dropId){
+  const drop = document.getElementById(dropId);
+  const items = drop.querySelectorAll(".brand-drop-item");
+  const isOpen = drop.classList.contains("open");
+  if(e.key === "ArrowDown"){
+    e.preventDefault();
+    if(!isOpen) showBrandDrop(inputId, dropId);
+    brandDropIdx[dropId] = Math.min((brandDropIdx[dropId]||0)+1, items.length-1);
+    items.forEach((el,i) => el.classList.toggle("dp-active", i===brandDropIdx[dropId]));
+    if(items[brandDropIdx[dropId]]) items[brandDropIdx[dropId]].scrollIntoView({block:"nearest"});
+    return;
+  }
+  if(e.key === "ArrowUp"){
+    e.preventDefault();
+    brandDropIdx[dropId] = Math.max((brandDropIdx[dropId]||0)-1, 0);
+    items.forEach((el,i) => el.classList.toggle("dp-active", i===brandDropIdx[dropId]));
+    if(items[brandDropIdx[dropId]]) items[brandDropIdx[dropId]].scrollIntoView({block:"nearest"});
+    return;
+  }
+  if(e.key === "Enter"){
+    const idx = brandDropIdx[dropId]||0;
+    if(isOpen && idx >= 0 && items[idx]){
+      e.preventDefault();
+      items[idx].dispatchEvent(new MouseEvent("mousedown",{bubbles:true}));
+      return;
+    }
+    if(isOpen && items.length===1){
+      e.preventDefault();
+      items[0].dispatchEvent(new MouseEvent("mousedown",{bubbles:true}));
+      return;
+    }
+    drop.classList.remove("open");
+    return;
+  }
+  if(e.key === "Escape"){ drop.classList.remove("open"); }
+  if(e.key === "Tab"){ drop.classList.remove("open"); }
+}
+
 window.addEventListener("DOMContentLoaded",()=>{
   loadProducts();
   loadWorth();
+
+  // Close brand drops on outside click
+  document.addEventListener("mousedown", e=>{
+    ['pbrandDrop','ePbrandDrop'].forEach(id=>{
+      const drop=document.getElementById(id);
+      const input=document.getElementById(id.replace('Drop',''));
+      if(drop&&!drop.contains(e.target)&&e.target!==input) drop.classList.remove("open");
+    });
+  });
 });
 
 function loadWorth(){

@@ -48,13 +48,34 @@
     .cust-drop{position:absolute;top:100%;left:0;width:100%;background:white;border:1px solid #aaa;border-radius:6px;max-height:200px;overflow-y:auto;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,0.15);display:none;}
     .cust-drop-item{padding:8px 12px;cursor:pointer;border-bottom:1px solid #f0f0f0;font-size:13px;}
     .cust-drop-item:hover,.cust-drop-item.dp-active{background:#e8f0ff;}
-    @media print{@page{size:A4;margin:10mm;}body *{visibility:hidden;}#invoiceArea,#invoiceArea *{visibility:visible;}#invoiceArea{position:fixed;top:0;left:0;width:100%;}.no-print{display:none!important;}}
     #invoiceArea{font-family:'Courier New',monospace;padding:20px;background:white;}
     .ih{text-align:center;margin-bottom:8px;}.ih h2{font-size:22px;font-weight:bold;letter-spacing:2px;}.ih p{font-size:13px;margin:2px 0;}
     .iline{border-top:2px solid #333;margin:6px 0;}
     .imeta{display:flex;justify-content:space-between;margin:8px 0;font-size:13px;}
     .itbl{width:100%;border-collapse:collapse;margin:8px 0;font-size:13px;}.itbl th,.itbl td{border:1px solid #333;padding:6px 8px;}.itbl th{text-align:center;font-weight:bold;}
     .ifooter{font-size:13px;margin-top:5px;}.isign{text-align:right;margin-top:22px;font-size:13px;}
+      @media print {
+      @page {
+        size: 148mm 210mm;
+        margin: 4mm 6mm;
+      }
+      body * { visibility: hidden; }
+      #invoiceArea, #invoiceArea * { visibility: visible; }
+      #invoiceArea {
+        position: fixed;
+        top: 0; left: 0;
+        width: 148mm;
+        font-size: 10px;
+      }
+      #printArea, #printArea * { visibility: visible; }
+      #printArea {
+        position: fixed;
+        top: 0; left: 0;
+        width: 148mm;
+        font-size: 10px;
+      }
+      .no-print { display: none !important; }
+    }
   </style>
 </head>
 <body>
@@ -174,7 +195,7 @@
 <div class="prod-drop" id="prodDrop"></div>
 
 <script>
-const API=`${window.location.protocol}//${window.location.hostname}:3000`;
+const API="http://localhost:3000";
 const SHOP="SUN CERAMIC",PHONE="9942607766";
 if(!sessionStorage.getItem("loggedIn"))window.location.href="login.html";
 
