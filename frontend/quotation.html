@@ -66,32 +66,39 @@
     .ih{text-align:center;margin-bottom:8px;}
     .ih h2{font-size:22px;font-weight:bold;letter-spacing:2px;}
     .ih p{font-size:13px;margin:2px 0;}
-    .iline{border-top:2px solid #333;margin:6px 0;}
-    .imeta{display:flex;justify-content:space-between;margin:8px 0;font-size:13px;}
     .itbl{width:100%;border-collapse:collapse;margin:8px 0;font-size:13px;}
     .itbl th,.itbl td{border:1px solid #333;padding:5px 7px;}
     .itbl th{text-align:center;font-weight:bold;}
     .ifooter{font-size:13px;margin-top:5px;}
     .isign{text-align:right;margin-top:22px;font-size:13px;}
-      @media print {
+      
+      #invoiceArea{font-family:'Courier New',monospace;padding:4px;background:white;}
+    .ih{text-align:center;margin-bottom:4px;}.ih h2{font-size:14pt;font-weight:bold;letter-spacing:1px;}.ih p{font-size:8pt;margin:1px 0;}
+    .iline{border-top:1.5px solid #333;margin:3px 0;}
+    .imeta{display:flex;justify-content:space-between;margin:4px 0;font-size:8pt;}
+    .itbl{width:100%;border-collapse:collapse;margin:4px 0;font-size:8pt;}.itbl th,.itbl td{border:1px solid #333;padding:3px 5px;}.itbl th{text-align:center;font-weight:bold;}
+    .ifooter{font-size:8pt;margin-top:3px;}.isign{text-align:right;margin-top:10px;font-size:8pt;}
+    @media print {
       @page {
-        size: 148mm 210mm;
-        margin: 4mm 6mm;
+        size: 148mm 105mm;
+        margin: 3mm 4mm;
       }
-      body * { visibility: hidden; }
-      #invoiceArea, #invoiceArea * { visibility: visible; }
+      body * { visibility: hidden !important; }
+      #invoiceArea, #invoiceArea * { visibility: visible !important; }
       #invoiceArea {
-        position: fixed;
-        top: 0; left: 0;
-        width: 148mm;
-        font-size: 10px;
+        position: fixed !important;
+        top: 0 !important; left: 0 !important;
+        width: 140mm !important;
+        font-size: 8pt !important;
+        line-height: 1.2 !important;
       }
-      #printArea, #printArea * { visibility: visible; }
+      #printArea, #printArea * { visibility: visible !important; }
       #printArea {
-        position: fixed;
-        top: 0; left: 0;
-        width: 148mm;
-        font-size: 10px;
+        position: fixed !important;
+        top: 0 !important; left: 0 !important;
+        width: 140mm !important;
+        font-size: 8pt !important;
+        line-height: 1.2 !important;
       }
       .no-print { display: none !important; }
     }
@@ -576,7 +583,7 @@ function buildPrintArea(q){
       <td style="text-align:right;">${parseFloat(item.total_amount).toFixed(2)}</td>
     </tr>`;
   });
-  for(let i=q.items.length;i<7;i++) rows+=`<tr><td>&nbsp;</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>`;
+  for(let i=q.items.length;i<4;i++) rows+=`<tr><td>&nbsp;</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>`;
 
   document.getElementById("printArea").innerHTML=`
     <div class="ih"><h2>${SHOP}</h2><p>CELL: ${PHONE}</p><p style="font-weight:bold;margin-top:5px;font-size:15px;">QUOTATION</p></div>

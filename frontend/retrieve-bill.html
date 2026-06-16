@@ -55,32 +55,34 @@
     table.alter-tbl th{background:#fd7e14;color:white;padding:7px;font-size:12px;text-align:center;}
     table.alter-tbl td{padding:4px;border:1px solid #eee;text-align:center;font-size:12px;vertical-align:middle;}
     table.alter-tbl td input{padding:5px;font-size:12px;border:1px solid #ccc;border-radius:4px;width:100%;}
-
-    #invoiceArea{font-family:'Courier New',monospace;padding:20px;background:white;}
-    .ih{text-align:center;margin-bottom:8px;}.ih h2{font-size:22px;font-weight:bold;letter-spacing:2px;}.ih p{font-size:13px;margin:2px 0;}
-    .iline{border-top:2px solid #333;margin:6px 0;}
-    .imeta{display:flex;justify-content:space-between;margin:8px 0;font-size:13px;}
-    .itbl{width:100%;border-collapse:collapse;margin:8px 0;font-size:13px;}.itbl th,.itbl td{border:1px solid #333;padding:6px 8px;}.itbl th{text-align:center;font-weight:bold;}
-    .ifooter{font-size:13px;margin-top:5px;}.isign{text-align:right;margin-top:22px;font-size:13px;}
-      @media print {
+      
+      #invoiceArea{font-family:'Courier New',monospace;padding:4px;background:white;}
+    .ih{text-align:center;margin-bottom:4px;}.ih h2{font-size:14pt;font-weight:bold;letter-spacing:1px;}.ih p{font-size:8pt;margin:1px 0;}
+    .iline{border-top:1.5px solid #333;margin:3px 0;}
+    .imeta{display:flex;justify-content:space-between;margin:4px 0;font-size:8pt;}
+    .itbl{width:100%;border-collapse:collapse;margin:4px 0;font-size:8pt;}.itbl th,.itbl td{border:1px solid #333;padding:3px 5px;}.itbl th{text-align:center;font-weight:bold;}
+    .ifooter{font-size:8pt;margin-top:3px;}.isign{text-align:right;margin-top:10px;font-size:8pt;}
+    @media print {
       @page {
-        size: 148mm 210mm;
-        margin: 4mm 6mm;
+        size: 148mm 105mm;
+        margin: 3mm 4mm;
       }
-      body * { visibility: hidden; }
-      #invoiceArea, #invoiceArea * { visibility: visible; }
+      body * { visibility: hidden !important; }
+      #invoiceArea, #invoiceArea * { visibility: visible !important; }
       #invoiceArea {
-        position: fixed;
-        top: 0; left: 0;
-        width: 148mm;
-        font-size: 10px;
+        position: fixed !important;
+        top: 0 !important; left: 0 !important;
+        width: 140mm !important;
+        font-size: 8pt !important;
+        line-height: 1.2 !important;
       }
-      #printArea, #printArea * { visibility: visible; }
+      #printArea, #printArea * { visibility: visible !important; }
       #printArea {
-        position: fixed;
-        top: 0; left: 0;
-        width: 148mm;
-        font-size: 10px;
+        position: fixed !important;
+        top: 0 !important; left: 0 !important;
+        width: 140mm !important;
+        font-size: 8pt !important;
+        line-height: 1.2 !important;
       }
       .no-print { display: none !important; }
     }
@@ -346,8 +348,8 @@ function buildInvoice(b){
   function w(n){const a=["","One","Two","Three","Four","Five","Six","Seven","Eight","Nine","Ten","Eleven","Twelve","Thirteen","Fourteen","Fifteen","Sixteen","Seventeen","Eighteen","Nineteen"];const t=["","","Twenty","Thirty","Forty","Fifty","Sixty","Seventy","Eighty","Ninety"];n=Math.round(n);if(n===0)return "Zero";if(n<20)return a[n];if(n<100)return t[Math.floor(n/10)]+(n%10?" "+a[n%10]:"");if(n<1000)return a[Math.floor(n/100)]+" Hundred"+(n%100?" "+w(n%100):"");if(n<100000)return w(Math.floor(n/1000))+" Thousand"+(n%1000?" "+w(n%1000):"");if(n<10000000)return w(Math.floor(n/100000))+" Lakh"+(n%100000?" "+w(n%100000):"");return w(Math.floor(n/10000000))+" Crore"+(n%10000000?" "+w(n%10000000):"");}
   const amtWords=w(Math.round(total))+" Rupees Only";
   let rows="",totalQty=0;
-  b.items.forEach((item,i)=>{totalQty+=parseInt(item.quantity);rows+=`<tr><td style="text-align:center;">${i+1}</td><td style="text-align:left;">${item.product||"-"}</td><td style="text-align:center;">${item.quantity}</td><td style="text-align:right;">${parseFloat(item.rate||0).toFixed(2)}</td><td style="text-align:right;">${parseFloat(item.total_amount||0).toFixed(2)}</td></tr>`;});
-  for(let i=b.items.length;i<8;i++)rows+=`<tr><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>`;
+  b.items.forEach((item,i)=>{totalQty+=parseInt(item.quantity);rows+=`<tr><td style="text-align:center;padding:2px 4px;">${i+1}</td><td style="text-align:left;">${item.product||"-"}</td><td style="text-align:center;">${item.quantity}</td><td style="text-align:right;">${parseFloat(item.rate||0).toFixed(2)}</td><td style="text-align:right;">${parseFloat(item.total_amount||0).toFixed(2)}</td></tr>`;});
+  for(let i=b.items.length;i<4;i++)rows+=`<tr><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>`;
   document.getElementById("invoiceArea").innerHTML=`
     ${b.cancelled?`<div style="text-align:center;background:#fff0f0;color:red;font-weight:bold;padding:8px;border-radius:6px;margin-bottom:10px;">⚠️ CANCELLED BILL</div>`:""}
     <div class="ih"><h2>${SHOP}</h2><p>CELL: ${PHONE_NO}</p><p style="font-weight:bold;margin-top:5px;font-size:15px;">Q BILL</p></div>
@@ -367,7 +369,7 @@ function buildInvoice(b){
       <div class="iline" style="border-color:#555;"></div>
       <div style="display:flex;justify-content:space-between;padding:3px 0;"><span><i>${amtWords}</i></span><span><b>Net Amount : ${total.toFixed(2)}</b></span></div>
     </div>
-    <div class="isign"><p>For ${SHOP}</p><br><br><p>Authorised Signatory</p></div>`;
+    <div class="isign"><p>For ${SHOP}</p><br><p>Authorised Signatory</p></div>`;
 }
 
 // ── PDF SHARE ──────────────────────────────────────────
