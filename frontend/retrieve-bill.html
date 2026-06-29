@@ -363,25 +363,38 @@ function buildInvoice(b){
 
 // ── PDF SHARE ──────────────────────────────────────────
 function printBill(){
-  const content=document.getElementById("invoiceArea").innerHTML;
-  const win=window.open('','_blank','width=600,height=450');
+  const content = document.getElementById("invoiceArea").innerHTML;
+  const win = window.open('','_blank','width=600,height=800');
   win.document.write(`<!DOCTYPE html><html><head>
     <title>Q Bill</title>
     <style>
-      @page{size:148mm 105mm;margin:3mm 4mm;}
-      body{font-family:'Courier New',monospace;font-size:8pt;line-height:1.3;margin:0;padding:4px;width:140mm;}
-      table{width:100%;border-collapse:collapse;}
-      th,td{border:1px solid #333;padding:3px 5px;font-size:8pt;}
-      th{text-align:center;font-weight:bold;}
-      .ih{text-align:center;margin-bottom:4px;}.ih h2{font-size:14pt;font-weight:bold;letter-spacing:1px;margin:0;}.ih p{font-size:8pt;margin:1px 0;}
-      .iline{border-top:1.5px solid #333;margin:3px 0;}
-      .imeta{display:flex;justify-content:space-between;margin:4px 0;font-size:8pt;}
-      .ifooter{font-size:8pt;margin-top:3px;}
-      .isign{text-align:right;margin-top:8px;font-size:8pt;}
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      @page {
+        size: A5 portrait;
+        margin: 5mm 6mm;
+      }
+      html, body {
+        width: 100%;
+        font-family: 'Courier New', monospace;
+        font-size: 9pt;
+        line-height: 1.4;
+      }
+      table { width: 100%; border-collapse: collapse; }
+      th, td { border: 0.8px solid #333; padding: 3px 5px; font-size: 9pt; }
+      th { text-align: center; font-weight: bold; }
+      .ih { text-align: center; margin-bottom: 4px; }
+      .ih h2 { font-size: 15pt; font-weight: bold; letter-spacing: 2px; }
+      .ih p { font-size: 9pt; margin: 1px 0; }
+      .iline { border-top: 1.5px solid #333; margin: 4px 0; }
+      .imeta { display: flex; justify-content: space-between; margin: 4px 0; font-size: 9pt; }
+      .ifooter { font-size: 9pt; margin-top: 4px; }
+      .isign { text-align: right; font-size: 9pt; margin-top: 6px; }
+      b { font-weight: bold; }
     </style>
   </head><body>${content}</body></html>`);
-  win.document.close();win.focus();
-  setTimeout(()=>{win.print();win.close();},300);
+  win.document.close();
+  win.focus();
+  setTimeout(()=>{ win.print(); win.close(); }, 500);
 }
 
 async function sharePDF(){
