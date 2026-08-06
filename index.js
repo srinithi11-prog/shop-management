@@ -5,8 +5,6 @@ const cors = require("cors");
 const app = express();
 app.use(express.json());
 app.use(cors());
-const path = require("path");
-app.use(express.static(path.join(__dirname, "frontend")));
 
 const db = mysql.createConnection({
   host: "localhost",
@@ -21,7 +19,7 @@ db.connect(err => {
 });
 
 // ================= LOGIN =================
-app.post("/login", (req, res) => {
+app.get("/login", (req, res) => {
   const { username, password } = req.body;
   db.query("SELECT * FROM users WHERE username=? AND password=?", [username, password], (err, r) => {
     if (err) return res.json({ success: false });
@@ -322,11 +320,11 @@ app.post("/create-bill-multi", (req, res) => {
                 );
 
                 const newQty = b.remaining_quantity - quantity;
-if (newQty <= 0) {
-  db.query("UPDATE product_batches SET remaining_quantity=0 WHERE batch_id=?", [batch_id]);
-} else {
-  db.query("UPDATE product_batches SET remaining_quantity=? WHERE batch_id=?", [newQty, batch_id]);
-}
+                if (newQty <= 0) {
+                  db.query("DELETE FROM product_batches WHERE batch_id=?", [batch_id]);
+                } else {
+                  db.query("UPDATE product_batches SET remaining_quantity=? WHERE batch_id=?", [newQty, batch_id]);
+                }
 
                 processed++;
                 if (processed === items.length) {
@@ -1004,8 +1002,8 @@ app.put("/alter-bill/:id", (req, res) => {
       });
     };
     doDeletes(() => {
-      const existing = items.filter(i => i.item_id !== "new");
-      const newItems = items.filter(i => i.item_id === "new");
+      const existing = items.filter(i => i.item_id && i.item_id !== "new" && i.item_id !== 0);
+      const newItems = items.filter(i => !i.item_id || i.item_id === "new" || i.item_id === 0);
       let done = 0;
       const finish = () => {
         db.query("SELECT SUM(total_amount) as total FROM bill_items WHERE bill_id=?", [bill_id], (e, r2) => {
@@ -1034,7 +1032,10 @@ app.put("/alter-bill/:id", (req, res) => {
           }
           db.query("INSERT INTO bill_items (bill_id, batch_id, product_id, quantity, selling_price, total_amount, profit, hsn_code, gst_percent, cgst, sgst) VALUES (?,?,?,?,?,?,0,'',0,0,0)",
             [bill_id, item.batch_id || null, item.product_id || null, item.quantity, item.rate, item.total_amount],
-            () => { nd++; if (nd === newItems.length) finish(); });
+            () => {
+              nd++;
+              if (nd === newItems.length) finish();
+            });
         });
       }
       if (!existing.length && !newItems.length) finish();
@@ -1477,6 +1478,25 @@ app.get("/supplier-statement/:id", (req, res) => {
     });
   });
 });
+
+
+// Bill stats - today count, total count, last bill no
+app.get("/bill-stats", (req, res) => {
+  const today = new Date().toISOString().split("T")[0];
+  db.query(`
+    SELECT
+      COUNT(*) as total_bills,
+      SUM(CASE WHEN DATE(bill_date)=? AND cancelled=0 THEN 1 ELSE 0 END) as today_bills,
+      SUM(CASE WHEN DATE(bill_date)=? AND cancelled=0 THEN grand_total ELSE 0 END) as today_sales,
+      MAX(bill_id) as last_bill_id
+    FROM bills WHERE cancelled=0
+  `, [today, today], (err, r) => {
+    if (err) return res.json({ total_bills:0, today_bills:0, today_sales:0, last_bill_id:null });
+    res.json(r[0]);
+  });
+});
+const path = require("path");
+app.use(express.static(path.join(__dirname, "public"))); // or wherever your HTML/JS/CSS live
 
 // ================= SERVER =================
 app.listen(3000, () => console.log("Running on port 3000"));
