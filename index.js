@@ -1,10 +1,19 @@
 const express = require("express");
 const mysql = require("mysql2");
 const cors = require("cors");
+const path = require("path");
 
 const app = express();
 app.use(express.json());
 app.use(cors());
+
+// Serve frontend HTML files from the frontend folder
+app.use(express.static(path.join(__dirname, "frontend")));
+
+// Root route - serve index.html
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "frontend", "index.html"));
+});
 
 const db = mysql.createConnection({
   host: "localhost",
@@ -19,7 +28,7 @@ db.connect(err => {
 });
 
 // ================= LOGIN =================
-app.get("/login", (req, res) => {
+app.post("/login", (req, res) => {
   const { username, password } = req.body;
   db.query("SELECT * FROM users WHERE username=? AND password=?", [username, password], (err, r) => {
     if (err) return res.json({ success: false });
@@ -1004,22 +1013,29 @@ app.put("/alter-bill/:id", (req, res) => {
     doDeletes(() => {
       const existing = items.filter(i => i.item_id && i.item_id !== "new" && i.item_id !== 0);
       const newItems = items.filter(i => !i.item_id || i.item_id === "new" || i.item_id === 0);
-      let done = 0;
+      const total_ops = existing.length + newItems.length;
+      let done_ops = 0;
       const finish = () => {
         db.query("SELECT SUM(total_amount) as total FROM bill_items WHERE bill_id=?", [bill_id], (e, r2) => {
           const newTotal = parseFloat(r2[0].total) || 0;
-          db.query("UPDATE bills SET grand_total=? WHERE bill_id=?", [newTotal, bill_id], () => res.json({ success: true, new_total: newTotal }));
+          db.query("UPDATE bills SET grand_total=? WHERE bill_id=?", [newTotal, bill_id], () => {
+            res.json({ success: true, new_total: newTotal });
+          });
         });
       };
+      const checkDone = () => {
+        done_ops++;
+        if (done_ops === total_ops) finish();
+      };
+      if (total_ops === 0) return finish();
       if (existing.length) {
         existing.forEach(item => {
           db.query("UPDATE bill_items SET selling_price=?, total_amount=?, quantity=? WHERE item_id=?",
             [item.rate, item.total_amount, item.quantity, item.item_id],
-            () => { done++; if (done === existing.length && !newItems.length) finish(); });
+            () => checkDone());
         });
       }
       if (newItems.length) {
-        let nd = 0;
         newItems.forEach(item => {
           if (item.batch_id) {
             db.query("SELECT * FROM product_batches WHERE batch_id=?", [item.batch_id], (e, batches) => {
@@ -1032,13 +1048,9 @@ app.put("/alter-bill/:id", (req, res) => {
           }
           db.query("INSERT INTO bill_items (bill_id, batch_id, product_id, quantity, selling_price, total_amount, profit, hsn_code, gst_percent, cgst, sgst) VALUES (?,?,?,?,?,?,0,'',0,0,0)",
             [bill_id, item.batch_id || null, item.product_id || null, item.quantity, item.rate, item.total_amount],
-            () => {
-              nd++;
-              if (nd === newItems.length) finish();
-            });
+            () => checkDone());
         });
       }
-      if (!existing.length && !newItems.length) finish();
     });
   });
 });
@@ -1495,8 +1507,6 @@ app.get("/bill-stats", (req, res) => {
     res.json(r[0]);
   });
 });
-const path = require("path");
-app.use(express.static(path.join(__dirname, "public"))); // or wherever your HTML/JS/CSS live
 
 // ================= SERVER =================
 app.listen(3000, () => console.log("Running on port 3000"));

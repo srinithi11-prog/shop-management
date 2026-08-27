@@ -72,6 +72,12 @@
 </head>
 <body>
 <div class="topbar"><h1>🧾 Sales Billing</h1><span id="fyLabel" style="font-size:13px;opacity:0.85;"></span></div>
+<div style="background:#0056b3;color:white;padding:6px 24px;display:flex;gap:24px;flex-wrap:wrap;font-size:13px;">
+  <span>📋 Last Q No: <b id="lastBillNo" style="font-size:15px;">—</b></span>
+  <span>📅 Today's Bills: <b id="todayBillCount">—</b></span>
+  <span>📦 Total Bills: <b id="totalBillCount">—</b></span>
+  <span>💰 Today's Sales: <b id="todaySalesAmt">—</b></span>
+</div>
 <div class="nav">
   <a href="index.html">🏠 Home<span class="key-hint">0</span></a>
   <a href="billing.html" class="active">🧾 Billing<span class="key-hint">1</span></a>
@@ -158,7 +164,10 @@
 
   <div class="card" id="invoiceCard" style="display:none;">
     <div class="no-print" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
-      <h2 style="color:#28a745;">✅ Bill Created</h2>
+      <div>
+        <h2 style="color:#28a745;">✅ Bill Created</h2>
+        <div style="font-size:16px;font-weight:bold;color:#007bff;margin-top:4px;" id="createdBillNo"></div>
+      </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <button class="warn" onclick="printBill()">🖨️ Print</button>
         <button class="purple" id="sharePdfBtn" onclick="sharePDF()">📤 Share PDF</button>
@@ -200,6 +209,7 @@ window.addEventListener("DOMContentLoaded",()=>{
   document.getElementById("todayLabel").innerText=new Date().toLocaleDateString("en-IN",{weekday:"short",year:"numeric",month:"short",day:"numeric"});
   document.getElementById("customDate").value=new Date().toISOString().split("T")[0];
   fetch(API+"/active-year").then(r=>r.json()).then(fy=>{if(fy)document.getElementById("fyLabel").innerText="FY: "+fy.year_label;}).catch(()=>{});
+  loadBillStats();
   fetch(API+"/products").then(r=>r.json()).then(d=>{allProducts=d;addRow();}).catch(()=>addRow());
   loadRegular();
   document.addEventListener("mousedown",e=>{
@@ -214,6 +224,17 @@ function toggleDateInput(){const c=document.getElementById("dateOption").value==
 function onPaymentChange(){if(document.getElementById("paymentType").value==="CREDIT"&&!document.getElementById("custId").value){document.getElementById("saveRegular").checked=true;document.getElementById("saveRegular").disabled=true;}else{document.getElementById("saveRegular").disabled=false;}}
 
 function loadRegular(){fetch(API+"/regular-customers").then(r=>r.json()).then(d=>{allRegular=d;});}
+
+function loadBillStats(){
+  fetch(API+"/bill-stats").then(r=>r.json()).then(d=>{
+    document.getElementById("lastBillNo").innerText = d.last_bill_id ? "Q-"+d.last_bill_id : "—";
+    document.getElementById("todayBillCount").innerText = d.today_bills||0;
+    document.getElementById("totalBillCount").innerText = d.total_bills||0;
+    document.getElementById("todaySalesAmt").innerText = "₹"+parseFloat(d.today_sales||0).toFixed(2);
+  }).catch(()=>{
+    document.getElementById("lastBillNo").innerText = "—";
+  });
+}
 
 function searchCustomers(){
   const q=document.getElementById("custSearch").value.trim().toLowerCase();
@@ -358,7 +379,7 @@ async function submitBill(){
     if(!customer_id&&body.save_as_regular&&d.customer_id){
       fetch(API+"/mark-regular/"+d.customer_id,{method:"POST"}).catch(()=>{});
     }
-    loadRegular();showInvoice(d.bill_id);
+    loadRegular();loadBillStats();showInvoice(d.bill_id);
   }).catch(err=>alert("Error: "+err.message));
 }
 
@@ -367,6 +388,8 @@ function showInvoice(bill_id){
     currentBill=b;buildInvoice(b,"invoiceArea");buildAlterRows(b);
     document.getElementById("alterSection").style.display="none";
     document.getElementById("invoiceCard").style.display="block";
+    const bnEl=document.getElementById("createdBillNo");
+    if(bnEl) bnEl.innerText="Q No: "+b.bill_no;
     document.getElementById("invoiceCard").scrollIntoView({behavior:"smooth"});
   });
 }
@@ -407,9 +430,7 @@ function printBill(){
     const a=["","One","Two","Three","Four","Five","Six","Seven","Eight","Nine","Ten","Eleven","Twelve","Thirteen","Fourteen","Fifteen","Sixteen","Seventeen","Eighteen","Nineteen"];
     const t=["","","Twenty","Thirty","Forty","Fifty","Sixty","Seventy","Eighty","Ninety"];
     n=Math.round(n);
-    if(n===0)return "Zero";
-    if(n<20)return a[n];
-    if(n<100)return t[Math.floor(n/10)]+(n%10?" "+a[n%10]:"");
+    if(n===0)return "Zero";if(n<20)return a[n];if(n<100)return t[Math.floor(n/10)]+(n%10?" "+a[n%10]:"");
     if(n<1000)return a[Math.floor(n/100)]+" Hundred"+(n%100?" "+toWords(n%100):"");
     if(n<100000)return toWords(Math.floor(n/1000))+" Thousand"+(n%1000?" "+toWords(n%1000):"");
     if(n<10000000)return toWords(Math.floor(n/100000))+" Lakh"+(n%100000?" "+toWords(n%100000):"");
@@ -417,7 +438,6 @@ function printBill(){
   }
   const amtWords = toWords(Math.round(total)) + " Rupees Only";
 
-  // Build item rows — fill to minimum 8 rows
   let itemRows = "";
   let totalQty = 0;
   b.items.forEach((item, i) => {
@@ -430,39 +450,36 @@ function printBill(){
       <td style="text-align:right;">${parseFloat(item.total_amount||0).toFixed(2)}</td>
     </tr>`;
   });
-  // Pad empty rows to fill space
-  const minRows = 8;
-  for(let i = b.items.length; i < minRows; i++){
-    itemRows += `<tr><td style="height:16px;">&nbsp;</td><td></td><td></td><td></td><td></td></tr>`;
+  for(let i = b.items.length; i < 5; i++){
+    itemRows += `<tr><td style="height:18px;">&nbsp;</td><td></td><td></td><td></td><td></td></tr>`;
   }
 
   const html = `<!DOCTYPE html><html><head><title></title><style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
-@page { size: A5 portrait; margin: 6mm 8mm; }
+@page { size: A5 portrait; margin: 5mm 6mm; }
 html { height: 100%; }
 body {
   width: 100%;
-  height: 100%;
   font-family: 'Courier New', monospace;
-  font-size: 10pt;
-  line-height: 1.4;
+  font-size: 13pt;
+  line-height: 1.35;
 }
-.shop-header { text-align: center; margin-bottom: 5px; }
-.shop-header h2 { font-size: 16pt; font-weight: bold; letter-spacing: 2px; }
-.shop-header p { font-size: 9pt; margin: 1px 0; }
-.shop-header .bill-type { font-size: 12pt; font-weight: bold; margin-top: 3px; }
-hr { border: none; border-top: 1.5px solid #000; margin: 4px 0; }
+.shop-header { text-align: center; margin-bottom: 4px; }
+.shop-header h2 { font-size: 18pt; font-weight: bold; letter-spacing: 2px; }
+.shop-header p { font-size: 11pt; margin: 1px 0; }
+.shop-header .bill-type { font-size: 14pt; font-weight: bold; margin-top: 2px; }
+hr { border: none; border-top: 1.5px solid #000; margin: 3px 0; }
 hr.thin { border-top: 0.8px solid #000; }
-.meta-row { display: flex; justify-content: space-between; font-size: 9.5pt; margin: 4px 0; }
+.meta-row { display: flex; justify-content: space-between; font-size: 11pt; margin: 3px 0; }
 .meta-left { text-align: left; }
 .meta-right { text-align: right; }
-table { width: 100%; border-collapse: collapse; margin: 5px 0; }
-table th { border: 0.8px solid #333; padding: 4px 5px; font-size: 9pt; font-weight: bold; text-align: center; }
-table td { border: 0.8px solid #333; padding: 3px 5px; font-size: 9pt; }
-.footer-row { display: flex; justify-content: space-between; font-size: 9pt; margin-top: 3px; }
-.amount-words { font-style: italic; font-size: 8.5pt; }
-.net-amount { font-weight: bold; font-size: 10pt; text-align: right; }
-.sign-row { text-align: right; font-size: 9pt; margin-top: 8px; }
+table { width: 100%; border-collapse: collapse; margin: 4px 0; }
+table th { border: 0.8px solid #333; padding: 3px 4px; font-size: 11pt; font-weight: bold; text-align: center; }
+table td { border: 0.8px solid #333; padding: 2px 4px; font-size: 11pt; }
+.footer-row { display: flex; justify-content: space-between; font-size: 11pt; margin-top: 2px; }
+.amount-words { font-style: italic; font-size: 10pt; }
+.net-amount { font-weight: bold; font-size: 12pt; text-align: right; }
+.sign-row { text-align: right; font-size: 11pt; margin-top: 6px; }
   </style></head><body>
     <div class="shop-header">
       <h2>SUN CERAMIC</h2>
@@ -471,9 +488,7 @@ table td { border: 0.8px solid #333; padding: 3px 5px; font-size: 9pt; }
     </div>
     <hr>
     <div class="meta-row">
-      <div class="meta-left">
-        <b>${custName}</b>${phone ? "<br>" + phone : ""}
-      </div>
+      <div class="meta-left"><b>${custName}</b>${phone?"<br>"+phone:""}</div>
       <div class="meta-right">
         <b>Payment : ${b.payment_mode||"-"}</b><br>
         <b>Date : ${dateStr}</b><br>
@@ -482,29 +497,24 @@ table td { border: 0.8px solid #333; padding: 3px 5px; font-size: 9pt; }
     </div>
     <hr>
     <table>
-      <thead>
-        <tr>
-          <th style="width:32px;">S.No</th>
-          <th style="text-align:left;">Description</th>
-          <th style="width:40px;">Qty</th>
-          <th style="width:70px;text-align:right;">Rate</th>
-          <th style="width:80px;text-align:right;">Amount</th>
-        </tr>
-      </thead>
+      <thead><tr>
+        <th style="width:36px;">S.No</th>
+        <th style="text-align:left;">Description</th>
+        <th style="width:44px;">Qty</th>
+        <th style="width:76px;text-align:right;">Rate</th>
+        <th style="width:86px;text-align:right;">Amount</th>
+      </tr></thead>
       <tbody>${itemRows}</tbody>
-      <tfoot>
-        <tr>
-          <td colspan="2" style="font-weight:bold;">Total</td>
-          <td style="text-align:center;font-weight:bold;">${totalQty}</td>
-          <td></td>
-          <td style="text-align:right;font-weight:bold;">${total.toFixed(2)}</td>
-        </tr>
-      </tfoot>
+      <tfoot><tr>
+        <td colspan="2" style="font-weight:bold;">Total</td>
+        <td style="text-align:center;font-weight:bold;">${totalQty}</td>
+        <td></td>
+        <td style="text-align:right;font-weight:bold;">${total.toFixed(2)}</td>
+      </tr></tfoot>
     </table>
     <hr class="thin">
     <div class="footer-row">
-      <span>E. &amp; O.E.</span>
-      <span>${total.toFixed(2)}</span>
+      <span>E. &amp; O.E.</span><span>${total.toFixed(2)}</span>
     </div>
     <hr class="thin">
     <div class="footer-row">
@@ -560,7 +570,7 @@ function showAlterSection(){document.getElementById("alterSection").style.displa
 function hideAlterSection(){document.getElementById("alterSection").style.display="none";}
 function saveAlter(){
   const items=[];
-  for(let i=1;i<=alterRowCount;i++){const row=document.getElementById("arow_"+i);if(!row)continue;const iid=document.getElementById("ariid_"+i).value;const pid=document.getElementById("arpid_"+i).value;const bid=document.getElementById("arbatch_"+i).value;const qty=parseInt(document.getElementById("arqty_"+i).value)||0;const rate=parseFloat(document.getElementById("arrate_"+i).value)||0;const amt=parseFloat(document.getElementById("aramt_"+i).value)||0;if(qty<=0||rate<=0)continue;items.push({item_id:iid,product_id:pid||null,batch_id:bid||null,quantity:qty,rate,total_amount:amt});}
+  for(let i=1;i<=alterRowCount;i++){const row=document.getElementById("arow_"+i);if(!row)continue;const iid=document.getElementById("ariid_"+i).value;const pid=document.getElementById("arpid_"+i).value;const bid=document.getElementById("arbatch_"+i).value;const qty=parseInt(document.getElementById("arqty_"+i).value)||0;const rate=parseFloat(document.getElementById("arrate_"+i).value)||0;const amt=parseFloat(document.getElementById("aramt_"+i).value)||0;if(qty<=0||rate<=0)continue;const itemId=(iid&&iid!=="new"&&!isNaN(parseInt(iid)))?parseInt(iid):"new";items.push({item_id:itemId,product_id:pid||null,batch_id:bid||null,quantity:qty,rate,total_amount:amt});}
   if(!items.length){alert("Add at least one item");return;}
   fetch(API+"/alter-bill/"+currentBill.bill_no,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({items,deleted_item_ids:deletedAlterIds})})
   .then(r=>r.json()).then(d=>{if(d.error){alert("Error: "+d.error);return;}alert("✅ Bill updated! New total: ₹"+d.new_total.toFixed(2));deletedAlterIds=[];showInvoice(currentBill.bill_no);});
