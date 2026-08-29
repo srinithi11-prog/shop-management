@@ -169,7 +169,7 @@
 </div>
 
 <script>
-const API = `${window.location.protocol}//${window.location.hostname}:3000`;
+const API = "http://localhost:3000";
 if(!sessionStorage.getItem("loggedIn")) window.location.href = "login.html";
 
 const now = new Date();
@@ -200,32 +200,65 @@ function loadSalesByDate(){
       div.innerHTML="<p style='color:#888;margin-top:8px;'>No sales on this date</p>";return;
     }
 
-    // Build table — profit column hidden until unlock
     const profitStyle = profitUnlocked?"":"display:none;";
-    let rows = d.bills.map(b=>`<tr>
-      <td>Q-${b.bill_id}</td>
-      <td style="text-align:left;">${b.customer_name}</td>
-      <td>${b.payment_mode||"-"}</td>
-      <td>₹${parseFloat(b.grand_total).toFixed(2)}</td>
-      <td class="hidden-profit" style="${profitStyle}color:${parseFloat(b.bill_profit||0)>=0?"#28a745":"#dc3545"};font-weight:bold;">
-        ₹${parseFloat(b.bill_profit||0).toFixed(2)}
-      </td>
-    </tr>`).join("");
+    let rows = d.bills.map(b=>{
+      const profit = parseFloat(b.bill_profit||0);
+      const profitColor = profit>=0?"#28a745":"#dc3545";
+      return `<tr>
+        <td>Q-${b.bill_id}</td>
+        <td style="text-align:left;">${b.customer_name}</td>
+        <td>${b.payment_mode||"-"}</td>
+        <td>₹${parseFloat(b.grand_total).toFixed(2)}</td>
+        <td class="hidden-profit" style="${profitStyle}color:${profitColor};font-weight:bold;">
+          ₹${profit.toFixed(2)}
+        </td>
+        <td class="hidden-profit" style="${profitStyle}color:${profit>=0?"#28a745":"#dc3545"};font-size:11px;">
+          ${parseFloat(b.grand_total)>0?((profit/parseFloat(b.grand_total))*100).toFixed(1)+"%":"—"}
+        </td>
+      </tr>`;
+    }).join("");
+
+    const totalProfit = parseFloat(d.total_profit||0);
+    const totalSales = parseFloat(d.total||0);
+    const profitPct = totalSales>0?((totalProfit/totalSales)*100).toFixed(1):"0.0";
 
     div.innerHTML=`
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin:10px 0;">
         <div class="scard blue" style="flex:none;padding:8px 16px;">
-          <h4>Total Sales</h4><h2>₹${parseFloat(d.total||0).toFixed(2)}</h2>
+          <h4>Total Sales</h4><h2>₹${totalSales.toFixed(2)}</h2>
         </div>
-        ${profitUnlocked?`<div class="scard green" style="flex:none;padding:8px 16px;"><h4>Total Profit</h4><h2>₹${parseFloat(d.total_profit||0).toFixed(2)}</h2></div>`:""}
+        <div class="scard" style="flex:none;padding:8px 16px;background:#f0f4f8;">
+          <h4>Bills</h4><h2>${d.bills.length}</h2>
+        </div>
+        ${profitUnlocked?`
+        <div class="scard green" style="flex:none;padding:8px 16px;">
+          <h4>Total Profit</h4><h2>₹${totalProfit.toFixed(2)}</h2>
+        </div>
+        <div class="scard purple" style="flex:none;padding:8px 16px;">
+          <h4>Profit %</h4><h2>${profitPct}%</h2>
+        </div>`:""}
       </div>
-      <table>
-        <thead><tr>
-          <th>Q No</th><th>Customer</th><th>Payment</th><th>Amount ₹</th>
-          <th class="hidden-profit" style="${profitStyle}">Profit ₹</th>
-        </tr></thead>
-        <tbody>${rows}</tbody>
-      </table>`;
+      <div style="overflow-x:auto;">
+        <table>
+          <thead><tr>
+            <th>Q No</th>
+            <th>Customer</th>
+            <th>Payment</th>
+            <th>Amount ₹</th>
+            <th class="hidden-profit" style="${profitStyle}">Profit ₹</th>
+            <th class="hidden-profit" style="${profitStyle}">Margin %</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+          <tfoot>
+            <tr style="background:#f0f4f8;font-weight:bold;">
+              <td colspan="3">Total</td>
+              <td>₹${totalSales.toFixed(2)}</td>
+              <td class="hidden-profit" style="${profitStyle}color:#28a745;">₹${totalProfit.toFixed(2)}</td>
+              <td class="hidden-profit" style="${profitStyle}color:#28a745;">${profitPct}%</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>`;
   });
 }
 
@@ -434,8 +467,8 @@ function revealProfit(){
   loadYearly();
   loadBrandProfit();
 
-  // Re-run sales by date if already loaded
-  if(document.getElementById("salesByDateResult").innerHTML.trim()) loadSalesByDate();
+  // Always re-run sales by date to show profit columns
+  loadSalesByDate();
 }
 
 // ── KEYBOARD NAV ───────────────────────────────────────

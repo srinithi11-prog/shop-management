@@ -419,118 +419,114 @@ function buildInvoice(b,targetId){
 }
 
 function printBill(){
-  if(!currentBill){ alert("No bill to print"); return; }
-  const b = currentBill;
-  const dateStr = new Date(b.bill_date).toLocaleDateString("en-IN");
-  const custName = b.customer && b.customer!=="Walk-in" ? b.customer : (b.walkin_name||"Walk-in");
-  const phone = b.phone || "";
-  const total = parseFloat(b.total||0);
-
+  if(!currentBill){alert("No bill to print");return;}
+  const b=currentBill;
+  const dateStr=new Date(b.bill_date).toLocaleDateString("en-IN");
+  const custName=b.customer&&b.customer!=="Walk-in"?b.customer:(b.walkin_name||"Walk-in");
+  const phone=b.phone||"";
+  const total=parseFloat(b.total||0);
   function toWords(n){
     const a=["","One","Two","Three","Four","Five","Six","Seven","Eight","Nine","Ten","Eleven","Twelve","Thirteen","Fourteen","Fifteen","Sixteen","Seventeen","Eighteen","Nineteen"];
     const t=["","","Twenty","Thirty","Forty","Fifty","Sixty","Seventy","Eighty","Ninety"];
-    n=Math.round(n);
-    if(n===0)return "Zero";if(n<20)return a[n];if(n<100)return t[Math.floor(n/10)]+(n%10?" "+a[n%10]:"");
+    n=Math.round(n);if(n===0)return"Zero";if(n<20)return a[n];if(n<100)return t[Math.floor(n/10)]+(n%10?" "+a[n%10]:"");
     if(n<1000)return a[Math.floor(n/100)]+" Hundred"+(n%100?" "+toWords(n%100):"");
     if(n<100000)return toWords(Math.floor(n/1000))+" Thousand"+(n%1000?" "+toWords(n%1000):"");
     if(n<10000000)return toWords(Math.floor(n/100000))+" Lakh"+(n%100000?" "+toWords(n%100000):"");
     return toWords(Math.floor(n/10000000))+" Crore"+(n%10000000?" "+toWords(n%10000000):"");
   }
-  const amtWords = toWords(Math.round(total)) + " Rupees Only";
-
-  let itemRows = "";
-  let totalQty = 0;
-  b.items.forEach((item, i) => {
-    totalQty += parseInt(item.quantity);
-    itemRows += `<tr>
-      <td style="text-align:center;">${i+1}</td>
-      <td>${item.product||item.product_name||"-"}</td>
-      <td style="text-align:center;">${item.quantity}</td>
-      <td style="text-align:right;">${parseFloat(item.rate||item.selling_price||0).toFixed(2)}</td>
-      <td style="text-align:right;">${parseFloat(item.total_amount||0).toFixed(2)}</td>
-    </tr>`;
+  const amtWords=toWords(Math.round(total))+" Rupees Only";
+  let itemRows="",totalQty=0;
+  b.items.forEach((item,i)=>{
+    totalQty+=parseInt(item.quantity);
+    itemRows+=`<tr><td style="text-align:center;height:13px;">${i+1}</td><td>${item.product||item.product_name||"-"}</td><td style="text-align:center;">${item.quantity}</td><td style="text-align:right;">${parseFloat(item.rate||item.selling_price||0).toFixed(2)}</td><td style="text-align:right;">${parseFloat(item.total_amount||0).toFixed(2)}</td></tr>`;
   });
-  for(let i = b.items.length; i < 5; i++){
-    itemRows += `<tr><td style="height:18px;">&nbsp;</td><td></td><td></td><td></td><td></td></tr>`;
+  for(let i=b.items.length;i<6;i++){
+    itemRows+=`<tr><td style="height:13px;">&nbsp;</td><td></td><td></td><td></td><td></td></tr>`;
   }
-
-  const html = `<!DOCTYPE html><html><head><title></title><style>
-* { box-sizing: border-box; margin: 0; padding: 0; }
-@page { size: A5 portrait; margin: 5mm 6mm; }
-html { height: 100%; }
-body {
-  width: 100%;
-  font-family: 'Courier New', monospace;
-  font-size: 13pt;
-  line-height: 1.35;
+  const html=`<!DOCTYPE html><html><head><title></title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+@page{size:148mm 105mm;margin:0;}
+html{margin:0;padding:0;}
+body{
+  width:148mm;
+  height:105mm;
+  overflow:hidden;
+  font-family:'Courier New',monospace;
+  font-size:9pt;
+  line-height:1.3;
+  padding:3mm 4mm;
+  display:flex;
+  flex-direction:column;
 }
-.shop-header { text-align: center; margin-bottom: 4px; }
-.shop-header h2 { font-size: 18pt; font-weight: bold; letter-spacing: 2px; }
-.shop-header p { font-size: 11pt; margin: 1px 0; }
-.shop-header .bill-type { font-size: 14pt; font-weight: bold; margin-top: 2px; }
-hr { border: none; border-top: 1.5px solid #000; margin: 3px 0; }
-hr.thin { border-top: 0.8px solid #000; }
-.meta-row { display: flex; justify-content: space-between; font-size: 11pt; margin: 3px 0; }
-.meta-left { text-align: left; }
-.meta-right { text-align: right; }
-table { width: 100%; border-collapse: collapse; margin: 4px 0; }
-table th { border: 0.8px solid #333; padding: 3px 4px; font-size: 11pt; font-weight: bold; text-align: center; }
-table td { border: 0.8px solid #333; padding: 2px 4px; font-size: 11pt; }
-.footer-row { display: flex; justify-content: space-between; font-size: 11pt; margin-top: 2px; }
-.amount-words { font-style: italic; font-size: 10pt; }
-.net-amount { font-weight: bold; font-size: 12pt; text-align: right; }
-.sign-row { text-align: right; font-size: 11pt; margin-top: 6px; }
-  </style></head><body>
-    <div class="shop-header">
-      <h2>SUN CERAMIC</h2>
-      <p>CELL: 9942607766</p>
-      <div class="bill-type">Q BILL</div>
+.header{text-align:center;margin-bottom:2px;}
+.header h2{font-size:13pt;font-weight:bold;letter-spacing:1px;margin:0;padding:0;}
+.header .sub{font-size:8pt;margin:0;padding:0;}
+.header .bt{font-size:9.5pt;font-weight:bold;margin:0;padding:0;}
+hr{border:none;border-top:1px solid #000;margin:2px 0;}
+hr.tk{border-top:1.5px solid #000;}
+.meta{display:flex;justify-content:space-between;font-size:8pt;padding:2px 0;}
+.meta-right{text-align:right;}
+table{width:100%;border-collapse:collapse;flex:1;}
+th{border:0.7px solid #333;padding:2px 3px;font-size:8pt;font-weight:bold;text-align:center;background:#f0f0f0;}
+td{border:0.7px solid #333;padding:1px 3px;font-size:8.5pt;}
+.tfoot td{font-weight:bold;}
+.footer{margin-top:2px;}
+.frow{display:flex;justify-content:space-between;font-size:8pt;}
+.words{font-style:italic;font-size:7.5pt;flex:1;}
+.netamt{font-weight:bold;font-size:9pt;}
+.sign{text-align:right;font-size:8pt;margin-top:2px;}
+</style>
+</head>
+<body>
+  <div class="header">
+    <h2>SUN CERAMIC</h2>
+    <div class="sub">CELL: 9942607766</div>
+    <div class="bt">Q BILL</div>
+  </div>
+  <hr class="tk">
+  <div class="meta">
+    <div><b>${custName}</b>${phone?"<br>"+phone:""}</div>
+    <div class="meta-right">
+      <b>Payment : ${b.payment_mode||"-"}</b><br>
+      <b>Date : ${dateStr}</b><br>
+      <b>Q No : ${b.bill_no}</b>
     </div>
+  </div>
+  <hr class="tk">
+  <table>
+    <thead><tr>
+      <th style="width:28px;">S.No</th>
+      <th style="text-align:left;">Description</th>
+      <th style="width:36px;">Qty</th>
+      <th style="width:65px;text-align:right;">Rate</th>
+      <th style="width:72px;text-align:right;">Amount</th>
+    </tr></thead>
+    <tbody>${itemRows}</tbody>
+    <tfoot><tr class="tfoot">
+      <td colspan="2">Total</td>
+      <td style="text-align:center;">${totalQty}</td>
+      <td></td>
+      <td style="text-align:right;">${total.toFixed(2)}</td>
+    </tr></tfoot>
+  </table>
+  <div class="footer">
     <hr>
-    <div class="meta-row">
-      <div class="meta-left"><b>${custName}</b>${phone?"<br>"+phone:""}</div>
-      <div class="meta-right">
-        <b>Payment : ${b.payment_mode||"-"}</b><br>
-        <b>Date : ${dateStr}</b><br>
-        <b>Q No : ${b.bill_no}</b>
-      </div>
-    </div>
+    <div class="frow"><span>E. &amp; O.E.</span><span>${total.toFixed(2)}</span></div>
     <hr>
-    <table>
-      <thead><tr>
-        <th style="width:36px;">S.No</th>
-        <th style="text-align:left;">Description</th>
-        <th style="width:44px;">Qty</th>
-        <th style="width:76px;text-align:right;">Rate</th>
-        <th style="width:86px;text-align:right;">Amount</th>
-      </tr></thead>
-      <tbody>${itemRows}</tbody>
-      <tfoot><tr>
-        <td colspan="2" style="font-weight:bold;">Total</td>
-        <td style="text-align:center;font-weight:bold;">${totalQty}</td>
-        <td></td>
-        <td style="text-align:right;font-weight:bold;">${total.toFixed(2)}</td>
-      </tr></tfoot>
-    </table>
-    <hr class="thin">
-    <div class="footer-row">
-      <span>E. &amp; O.E.</span><span>${total.toFixed(2)}</span>
+    <div class="frow">
+      <span class="words">${amtWords}</span>
+      <span class="netamt">Net Amount : ${total.toFixed(2)}</span>
     </div>
-    <hr class="thin">
-    <div class="footer-row">
-      <span class="amount-words">${amtWords}</span>
-      <span class="net-amount">Net Amount : ${total.toFixed(2)}</span>
-    </div>
-    <div class="sign-row">For SUN CERAMIC</div>
-  </body></html>`;
-
-  const win = window.open('','_blank','width=600,height=800');
+    <div class="sign">For SUN CERAMIC</div>
+  </div>
+</body></html>`;
+  const win=window.open("","_blank","width=700,height=520");
   win.document.write(html);
   win.document.close();
   win.focus();
-  setTimeout(()=>{ win.print(); win.close(); }, 500);
+  setTimeout(()=>{win.print();win.close();},500);
 }
-
 async function sharePDF(){
   const btn=document.getElementById("sharePdfBtn");const orig=btn.innerText;btn.innerText="⏳...";btn.disabled=true;
   try{const {jsPDF}=window.jspdf;const canvas=await html2canvas(document.getElementById("invoiceArea"),{scale:2,backgroundColor:"#ffffff"});

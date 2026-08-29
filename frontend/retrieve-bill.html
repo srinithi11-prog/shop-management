@@ -256,8 +256,10 @@ function clearSearch(){
 
 // View Bill
 function viewBill(bill_id){
-  fetch(API+"/bill/"+bill_id).then(r=>r.json()).then(b=>{
+  // Add cache buster to always get fresh data from server
+  fetch(API+"/bill/"+bill_id+"?t="+Date.now()).then(r=>r.json()).then(b=>{
     currentBill=b;
+    currentBill.bill_id = bill_id;
     buildInvoiceDisplay(b);
     buildAlterRows(b);
     hideAlterSection();
@@ -312,7 +314,7 @@ function printBill(){
   if(!currentBill){alert("No bill to print");return;}
   const b=currentBill;
   const dateStr=new Date(b.bill_date).toLocaleDateString("en-IN");
-  const custName=b.customer||"Walk-in";
+  const custName=b.customer&&b.customer!=="Walk-in"?b.customer:(b.walkin_name||"Walk-in");
   const phone=b.phone||"";
   const total=parseFloat(b.total||0);
   function toWords(n){
@@ -328,19 +330,95 @@ function printBill(){
   let itemRows="",totalQty=0;
   b.items.forEach((item,i)=>{
     totalQty+=parseInt(item.quantity);
-    itemRows+=`<tr><td style="text-align:center;">${i+1}</td><td>${item.product||item.product_name||"-"}</td><td style="text-align:center;">${item.quantity}</td><td style="text-align:right;">${parseFloat(item.rate||item.selling_price||0).toFixed(2)}</td><td style="text-align:right;">${parseFloat(item.total_amount||0).toFixed(2)}</td></tr>`;
+    itemRows+=`<tr><td style="text-align:center;height:13px;">${i+1}</td><td>${item.product||item.product_name||"-"}</td><td style="text-align:center;">${item.quantity}</td><td style="text-align:right;">${parseFloat(item.rate||item.selling_price||0).toFixed(2)}</td><td style="text-align:right;">${parseFloat(item.total_amount||0).toFixed(2)}</td></tr>`;
   });
-  for(let i=b.items.length;i<5;i++) itemRows+=`<tr><td style="height:18px;">&nbsp;</td><td></td><td></td><td></td><td></td></tr>`;
-  const css=`*{box-sizing:border-box;margin:0;padding:0;}@page{size:A5 portrait;margin:5mm 6mm;}body{width:100%;font-family:'Courier New',monospace;font-size:13pt;line-height:1.35;}.sh{text-align:center;margin-bottom:4px;}.sh h2{font-size:18pt;font-weight:bold;letter-spacing:2px;}.sh p{font-size:11pt;margin:1px 0;}.bt{font-size:14pt;font-weight:bold;margin-top:2px;}hr{border:none;border-top:1.5px solid #000;margin:3px 0;}hr.t{border-top:0.8px solid #000;}.mr{display:flex;justify-content:space-between;font-size:11pt;margin:3px 0;}table{width:100%;border-collapse:collapse;margin:4px 0;}th{border:0.8px solid #333;padding:3px 4px;font-size:11pt;font-weight:bold;text-align:center;}td{border:0.8px solid #333;padding:2px 4px;font-size:11pt;}.fr{display:flex;justify-content:space-between;font-size:11pt;margin-top:2px;}.aw{font-style:italic;font-size:10pt;}.na{font-weight:bold;font-size:12pt;}.sr{text-align:right;font-size:11pt;margin-top:6px;}`;
-  const html=`<!DOCTYPE html><html><head><title></title><style>${css}</style></head><body><div class="sh"><h2>SUN CERAMIC</h2><p>CELL: 9942607766</p><div class="bt">Q BILL</div></div><hr><div class="mr"><div><b>${custName}</b>${phone?"<br>"+phone:""}</div><div style="text-align:right;"><b>Payment : ${b.payment_mode||"-"}</b><br><b>Date : ${dateStr}</b><br><b>Q No : ${b.bill_no}</b></div></div><hr><table><thead><tr><th style="width:36px;">S.No</th><th style="text-align:left;">Description</th><th style="width:44px;">Qty</th><th style="width:76px;text-align:right;">Rate</th><th style="width:86px;text-align:right;">Amount</th></tr></thead><tbody>${itemRows}</tbody><tfoot><tr><td colspan="2" style="font-weight:bold;">Total</td><td style="text-align:center;font-weight:bold;">${totalQty}</td><td></td><td style="text-align:right;font-weight:bold;">${total.toFixed(2)}</td></tr></tfoot></table><hr class="t"><div class="fr"><span>E. &amp; O.E.</span><span>${total.toFixed(2)}</span></div><hr class="t"><div class="fr"><span class="aw">${amtWords}</span><span class="na">Net Amount : ${total.toFixed(2)}</span></div><div class="sr">For SUN CERAMIC</div></body></html>`;
-  const win=window.open("","_blank","width=600,height=800");
+  for(let i=b.items.length;i<6;i++){
+    itemRows+=`<tr><td style="height:13px;">&nbsp;</td><td></td><td></td><td></td><td></td></tr>`;
+  }
+  const html=`<!DOCTYPE html><html><head><title></title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+@page{size:148mm 105mm;margin:0;}
+html{margin:0;padding:0;}
+body{
+  width:148mm;
+  height:105mm;
+  overflow:hidden;
+  font-family:'Courier New',monospace;
+  font-size:9pt;
+  line-height:1.3;
+  padding:3mm 4mm;
+  display:flex;
+  flex-direction:column;
+}
+.header{text-align:center;margin-bottom:2px;}
+.header h2{font-size:13pt;font-weight:bold;letter-spacing:1px;margin:0;padding:0;}
+.header .sub{font-size:8pt;margin:0;padding:0;}
+.header .bt{font-size:9.5pt;font-weight:bold;margin:0;padding:0;}
+hr{border:none;border-top:1px solid #000;margin:2px 0;}
+hr.tk{border-top:1.5px solid #000;}
+.meta{display:flex;justify-content:space-between;font-size:8pt;padding:2px 0;}
+.meta-right{text-align:right;}
+table{width:100%;border-collapse:collapse;flex:1;}
+th{border:0.7px solid #333;padding:2px 3px;font-size:8pt;font-weight:bold;text-align:center;background:#f0f0f0;}
+td{border:0.7px solid #333;padding:1px 3px;font-size:8.5pt;}
+.tfoot td{font-weight:bold;}
+.footer{margin-top:2px;}
+.frow{display:flex;justify-content:space-between;font-size:8pt;}
+.words{font-style:italic;font-size:7.5pt;flex:1;}
+.netamt{font-weight:bold;font-size:9pt;}
+.sign{text-align:right;font-size:8pt;margin-top:2px;}
+</style>
+</head>
+<body>
+  <div class="header">
+    <h2>SUN CERAMIC</h2>
+    <div class="sub">CELL: 9942607766</div>
+    <div class="bt">Q BILL</div>
+  </div>
+  <hr class="tk">
+  <div class="meta">
+    <div><b>${custName}</b>${phone?"<br>"+phone:""}</div>
+    <div class="meta-right">
+      <b>Payment : ${b.payment_mode||"-"}</b><br>
+      <b>Date : ${dateStr}</b><br>
+      <b>Q No : ${b.bill_no}</b>
+    </div>
+  </div>
+  <hr class="tk">
+  <table>
+    <thead><tr>
+      <th style="width:28px;">S.No</th>
+      <th style="text-align:left;">Description</th>
+      <th style="width:36px;">Qty</th>
+      <th style="width:65px;text-align:right;">Rate</th>
+      <th style="width:72px;text-align:right;">Amount</th>
+    </tr></thead>
+    <tbody>${itemRows}</tbody>
+    <tfoot><tr class="tfoot">
+      <td colspan="2">Total</td>
+      <td style="text-align:center;">${totalQty}</td>
+      <td></td>
+      <td style="text-align:right;">${total.toFixed(2)}</td>
+    </tr></tfoot>
+  </table>
+  <div class="footer">
+    <hr>
+    <div class="frow"><span>E. &amp; O.E.</span><span>${total.toFixed(2)}</span></div>
+    <hr>
+    <div class="frow">
+      <span class="words">${amtWords}</span>
+      <span class="netamt">Net Amount : ${total.toFixed(2)}</span>
+    </div>
+    <div class="sign">For SUN CERAMIC</div>
+  </div>
+</body></html>`;
+  const win=window.open("","_blank","width=700,height=520");
   win.document.write(html);
   win.document.close();
   win.focus();
   setTimeout(()=>{win.print();win.close();},500);
 }
-
-// Share PDF
 async function sharePDF(){
   const btn=document.getElementById("sharePdfBtn");
   const orig=btn.innerText;btn.innerText="⏳...";btn.disabled=true;
@@ -406,8 +484,13 @@ function loadAlterBatches(rowId,pid,curBatch){
 
 // Alter rows
 function buildAlterRows(b){
-  document.getElementById("alterBody").innerHTML="";alterRowCount=0;deletedItemIds=[];
-  if(b.items&&b.items.length)b.items.forEach(item=>addAlterRowFromItem(item));
+  // Fully reset alter section
+  document.getElementById("alterBody").innerHTML="";
+  alterRowCount=0;
+  deletedItemIds=[];
+  document.getElementById("alterTotal").innerText="";
+  if(b.items&&b.items.length) b.items.forEach(item=>addAlterRowFromItem(item));
+  calcAT();
 }
 function addAlterRowFromItem(item){
   alterRowCount++;const id=alterRowCount;
@@ -471,14 +554,14 @@ function saveAlter(){
   .then(r=>r.json()).then(d=>{
     if(d.error){alert("Error: "+d.error);return;}
     alert("✅ Bill updated! New total: ₹"+d.new_total.toFixed(2));
-    deletedItemIds=[];viewBill(currentBill.bill_no);hideAlterSection();
+    deletedItemIds=[];viewBill(currentBill.bill_id||currentBill.bill_no);hideAlterSection();
   });
 }
 function doCancelBill(){
   if(!confirm("Cancel this bill?\n• Stock restored\n• Credit balance reversed\n\nCannot be undone."))return;
   fetch(API+"/cancel-bill/"+currentBill.bill_no,{method:"POST"}).then(r=>r.json()).then(d=>{
     if(d.error){alert("Error: "+d.error);return;}
-    alert("✅ Bill cancelled!");viewBill(currentBill.bill_no);loadOutstanding();
+    alert("✅ Bill cancelled!");viewBill(currentBill.bill_id||currentBill.bill_no);loadOutstanding();
   });
 }
 function esc(s){return (s||"").replace(/'/g,"\\'").replace(/"/g,'\\"');}
