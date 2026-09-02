@@ -204,7 +204,7 @@
 </div>
 
 <script>
-const API=`${window.location.protocol}//${window.location.hostname}:3000`;
+const API="http://localhost:3000";
 const SHOP="SUN CERAMIC",PHONE_NO="9942607766";
 if(!sessionStorage.getItem("loggedIn"))window.location.href="login.html";
 
@@ -337,9 +337,10 @@ function saveEditCustomer(){
 function deleteCustomer(){
   if(!selectedCustomer)return;
   if(!confirm("Delete "+selectedCustomer.name+"?\nBills will still be retrievable."))return;
-  fetch(API+"/customer/"+selectedCustomer.customer_id,{method:"DELETE"}).then(()=>{
+  fetch(API+"/customer/"+selectedCustomer.customer_id,{method:"DELETE"})
+  .then(()=>{
     selectedCustomer=null;document.getElementById("regDetail").classList.remove("show");loadRegularPage(regPage);
-  });
+  }).catch(err=>alert("Delete failed: "+err.message));
 }
 
 // ── STATEMENT ─────────────────────────────────────────

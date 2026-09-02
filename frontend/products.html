@@ -469,7 +469,11 @@ function addBatch(){
 
 function deleteBatch(batch_id,product_id){
   if(!confirm("Delete this batch?"))return;
-  fetch(API+"/batch/"+batch_id,{method:"DELETE"}).then(()=>{loadModalBatches(product_id);loadProducts();loadWorth();});
+  fetch(API+"/batch/"+batch_id,{method:"DELETE"})
+  .then(r=>r.json()).then(d=>{
+    if(d&&d.error){alert("Error: "+d.error);return;}
+    loadModalBatches(product_id);loadProducts();loadWorth();
+  }).catch(err=>alert("Delete failed: "+err.message));
 }
 
 function addProduct(){
@@ -497,13 +501,25 @@ function addProduct(){
 
 function quickDelete(product_id){
   if(!confirm("Delete this product and all its stock?"))return;
-  fetch(API+"/product/"+product_id,{method:"DELETE"}).then(()=>{loadProducts();loadWorth();});
+  fetch(API+"/product/"+product_id,{method:"DELETE"})
+  .then(r=>r.json())
+  .then(d=>{
+    if(d.error){alert("Error: "+d.error);return;}
+    loadProducts();loadWorth();
+  })
+  .catch(err=>alert("Delete failed: "+err.message));
 }
 
 function deleteProduct(){
   const p=filteredProducts[currentModalIdx];if(!p)return;
-  if(!confirm("Delete "+p.name+"?"))return;
-  fetch(API+"/product/"+p.product_id,{method:"DELETE"}).then(()=>{closeModal();loadProducts();loadWorth();});
+  if(!confirm("Delete "+p.name+" and all its stock batches?"))return;
+  fetch(API+"/product/"+p.product_id,{method:"DELETE"})
+  .then(r=>r.json())
+  .then(d=>{
+    if(d.error){alert("Error: "+d.error);return;}
+    closeModal();loadProducts();loadWorth();
+  })
+  .catch(err=>alert("Delete failed: "+err.message));
 }
 
 function closeModal(){document.getElementById("prodModal").classList.remove("show");}

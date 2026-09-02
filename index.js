@@ -116,10 +116,24 @@ app.post("/products", (req, res) => {
 });
 
 app.delete("/product/:id", (req, res) => {
-  db.query("DELETE FROM products WHERE product_id=?", [req.params.id], (err) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.send("Deleted");
-  });
+  const pid = req.params.id;
+  // Step 1: Set batch_id to NULL in bill_items for all batches of this product
+  // (so FK constraint won't block batch deletion)
+  db.query(
+    "UPDATE bill_items SET batch_id=NULL WHERE batch_id IN (SELECT batch_id FROM product_batches WHERE product_id=?)",
+    [pid], (err1) => {
+      if (err1) return res.status(500).json({ error: "Step1: " + err1.message });
+      // Step 2: Delete all batches for this product
+      db.query("DELETE FROM product_batches WHERE product_id=?", [pid], (err2) => {
+        if (err2) return res.status(500).json({ error: "Step2: " + err2.message });
+        // Step 3: Delete the product itself
+        db.query("DELETE FROM products WHERE product_id=?", [pid], (err3) => {
+          if (err3) return res.status(500).json({ error: "Step3: " + err3.message });
+          res.json({ success: true });
+        });
+      });
+    }
+  );
 });
 
 app.get("/stock-worth", (req, res) => {
@@ -389,6 +403,7 @@ app.get("/bill/:id", (req, res) => {
     `, [req.params.id], (err2, items) => {
       if (err2) return res.status(500).json({ error: err2.message });
       res.json({
+        bill_id: bill.bill_id,
         bill_no: bill.bill_id,
         bill_date: bill.bill_date,
         payment_mode: bill.payment_mode,

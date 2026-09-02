@@ -209,7 +209,7 @@
 <div class="prod-drop" id="prodDrop"></div>
 
 <script>
-const API = `${window.location.protocol}//${window.location.hostname}:3000`;
+const API = "http://localhost:3000";
 if(!sessionStorage.getItem("loggedIn")) window.location.href = "login.html";
 
 let rowCount = 0;
@@ -352,6 +352,22 @@ function showProdDrop(inputEl, rowId, fieldType){
   drop.style.left=(rect.left+window.scrollX)+"px";
   drop.style.width=Math.max(rect.width,220)+"px";
   drop.classList.add("open");
+}
+
+function hideProdDrop(){
+  document.getElementById("prodDrop").classList.remove("open");
+  dropIdx=-1; activeInput=null;
+}
+
+function handleProdKey(e, rowId, fieldType){
+  const drop=document.getElementById("prodDrop");
+  const isOpen=drop.classList.contains("open");
+  const items=drop.querySelectorAll(".prod-drop-item");
+  if(e.key==="ArrowDown"){e.preventDefault();if(!isOpen)showProdDrop(e.target,rowId,fieldType);dropIdx=Math.min(dropIdx+1,items.length-1);items.forEach((el,i)=>el.classList.toggle("dp-active",i===dropIdx));if(items[dropIdx])items[dropIdx].scrollIntoView({block:"nearest"});return;}
+  if(e.key==="ArrowUp"){e.preventDefault();dropIdx=Math.max(dropIdx-1,0);items.forEach((el,i)=>el.classList.toggle("dp-active",i===dropIdx));if(items[dropIdx])items[dropIdx].scrollIntoView({block:"nearest"});return;}
+  if(e.key==="Enter"){if(isOpen&&dropIdx>=0&&items[dropIdx]){e.preventDefault();items[dropIdx].dispatchEvent(new MouseEvent("mousedown",{bubbles:true}));return;}if(isOpen&&items.length===1){e.preventDefault();items[0].dispatchEvent(new MouseEvent("mousedown",{bubbles:true}));return;}e.preventDefault();const q=document.getElementById("pqty_"+rowId);if(q)q.focus();return;}
+  if(e.key==="Escape")hideProdDrop();
+  if(e.key==="Tab")hideProdDrop();
 }
 
 function esc(s){return (s||"").replace(/'/g,"\\'").replace(/"/g,'\\"');}
