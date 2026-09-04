@@ -66,7 +66,6 @@
   <a href="reports.html">📊 Reports<span class="key-hint">8</span></a>
   <a href="retrieve-bill.html" class="active">🔍 Find Bill<span class="key-hint">9</span></a>
 </div>
-
 <div class="container">
   <!-- Outstanding Credits -->
   <div class="card outstanding-box">
@@ -87,7 +86,6 @@
     </div>
     <div class="outstanding-total" id="outstandingTotal"></div>
   </div>
-
   <!-- Search -->
   <div class="card">
     <h3 style="margin-bottom:12px;">🔍 Search Bills</h3>
@@ -109,7 +107,6 @@
     </div>
     <div id="searchResults" style="margin-top:10px;overflow-x:auto;"></div>
   </div>
-
   <!-- Bill Detail -->
   <div class="card" id="billDetailCard" style="display:none;">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
@@ -140,22 +137,17 @@
     </div>
   </div>
 </div>
-
 <div class="prod-drop" id="prodDrop"></div>
-
 <script>
 const API="http://localhost:3000";
 const SHOP="SUN CERAMIC",PHONE_NO="9942607766";
 if(!sessionStorage.getItem("loggedIn"))window.location.href="login.html";
-
 let allCustomers=[],allProducts=[],currentBill=null;
 let alterRowCount=0,deletedItemIds=[];
 let activeInput=null,activeAlterRow=null,dropIdx=-1,nameIdx=-1;
-
 function esc(str){
   return String(str || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
-
 window.addEventListener("DOMContentLoaded",()=>{
   fetch(API+"/customers").then(r=>r.json()).then(d=>{allCustomers=d;}).catch(()=>{});
   fetch(API+"/products").then(r=>r.json()).then(d=>{allProducts=d;}).catch(()=>{});
@@ -167,7 +159,6 @@ window.addEventListener("DOMContentLoaded",()=>{
     if(pd&&!pd.contains(e.target)&&e.target!==activeInput)hideProdDrop();
   });
 });
-
 // Outstanding
 function loadOutstanding(){
   fetch(API+"/outstanding-credits").then(r=>r.json()).then(data=>{
@@ -190,7 +181,6 @@ function loadOutstanding(){
     document.getElementById("outstandingTotal").innerText="Total Outstanding: ₹"+total.toFixed(2);
   }).catch(()=>{});
 }
-
 // Name search
 function onNameSearch(){
   const q=document.getElementById("nameSearch").value.trim().toLowerCase();
@@ -258,7 +248,6 @@ function clearSearch(){
   document.getElementById("searchResults").innerHTML="";
   document.getElementById("billDetailCard").style.display="none";
 }
-
 // View Bill
 function viewBill(bill_id){
   fetch(API+"/bill/"+bill_id+"?t="+Date.now()).then(r=>r.json()).then(b=>{
@@ -274,7 +263,6 @@ function viewBill(bill_id){
     document.getElementById("billDetailCard").scrollIntoView({behavior:"smooth"});
   });
 }
-
 // Helper function to convert number to words
 function toWords(n){
   const a=["","One","Two","Three","Four","Five","Six","Seven","Eight","Nine","Ten","Eleven","Twelve","Thirteen","Fourteen","Fifteen","Sixteen","Seventeen","Eighteen","Nineteen"];
@@ -285,7 +273,6 @@ function toWords(n){
   if(n<10000000)return toWords(Math.floor(n/100000))+" Lakh"+(n%100000?" "+toWords(n%100000):"");
   return toWords(Math.floor(n/10000000))+" Crore"+(n%10000000?" "+toWords(n%10000000):"");
 }
-
 // Display invoice on screen
 function buildInvoiceDisplay(b){
   const dateStr=new Date(b.bill_date).toLocaleDateString("en-IN");
@@ -319,15 +306,15 @@ function buildInvoiceDisplay(b){
       </tr>`;
     }
   }
-
   document.getElementById("invoiceArea").innerHTML=`
     ${b.cancelled?`<div style="background:#fff0f0;color:red;font-weight:bold;padding:8px;border-radius:6px;margin-bottom:10px;text-align:center;">⚠️ CANCELLED BILL</div>`:""}
     <div style="font-family:'Arial',sans-serif;padding:20px;border:1px solid #000;background:#fff;width:100%;max-width:550px;margin:auto;">
       <div style="text-align:right;font-size:11px;font-weight:bold;">CELL: ${PHONE_NO}</div>
       <div style="text-align:center;margin-bottom:12px;">
-        <!-- SUN CERAMIC with Stylish Premium Display Font -->
+        <!-- SUN CERAMIC with Subtitle -->
         <div style="font-family:'Cinzel Decorative', 'Montserrat', 'Playfair Display', serif;font-size:28px;font-weight:900;letter-spacing:3px;text-transform:uppercase;background:linear-gradient(45deg, #007bff, #00b4d8);-webkit-background-clip:text;-webkit-text-fill-color:transparent;text-shadow:2px 2px 4px rgba(0,0,0,0.15);padding:2px 0;">${SHOP}</div>
-        <div style="font-size:13px;font-weight:bold;letter-spacing:2px;margin-top:2px;color:#333;">Q BILL</div>
+        <div style="font-size:11px;font-weight:700;letter-spacing:2px;color:#6c757d;text-transform:uppercase;margin-top:2px;">PREMIUM SANITARYWARES &amp; TILES</div>
+        <div style="font-size:13px;font-weight:bold;letter-spacing:2px;margin-top:6px;color:#333;">Q BILL</div>
       </div>
       
       <table style="width:100%;border-collapse:collapse;border:1px solid #000;margin-bottom:-1px;">
@@ -342,7 +329,6 @@ function buildInvoiceDisplay(b){
           </td>
         </tr>
       </table>
-
       <table style="width:100%;border-collapse:collapse;border:1px solid #000;">
         <thead>
           <tr style="background:#f9f9f9;">
@@ -372,7 +358,6 @@ function buildInvoiceDisplay(b){
           </tr>
         </tfoot>
       </table>
-
       <table style="width:100%;border-collapse:collapse;border:1px solid #000;margin-top:-1px;">
         <tr>
           <td style="border:1px solid #000;padding:8px;font-weight:bold;font-size:12px;text-align:left;vertical-align:top;color:#6c757d;">
@@ -386,7 +371,6 @@ function buildInvoiceDisplay(b){
       </table>
     </div>`;
 }
-
 // Print Bill
 function printBill(){
   if(!currentBill){alert("No bill to print");return;}
@@ -401,7 +385,6 @@ function printBill(){
   
   let itemRows="",totalQty=0;
   const items = b.items || [];
-
   for(let i=0; i<20; i++){
     if(i < items.length) {
       const item = items[i];
@@ -417,7 +400,6 @@ function printBill(){
       itemRows += `<tr><td style="height:16px;">&nbsp;</td><td></td><td></td><td></td></tr>`;
     }
   }
-
   const html=`<!DOCTYPE html><html><head><title>Q Bill</title>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=Montserrat:wght@800;900&display=swap" rel="stylesheet">
 <style>
@@ -435,15 +417,21 @@ body{font-family:Arial,sans-serif;font-size:9pt;line-height:1.15;padding:2mm;bac
   color:#007bff;
   -webkit-text-stroke:0.5px #000;
 }
-.bill-type{text-align:center;font-size:10pt;font-weight:bold;margin-bottom:4px;letter-spacing:1px;}
-
+.shop-subtitle{
+  text-align:center;
+  font-size:8pt;
+  font-weight:bold;
+  letter-spacing:1.5px;
+  color:#555;
+  text-transform:uppercase;
+  margin-top:1px;
+}
+.bill-type{text-align:center;font-size:10pt;font-weight:bold;margin-top:3px;margin-bottom:4px;letter-spacing:1px;}
 table.main-tbl{width:100%;border-collapse:collapse;margin-top:0px;}
 table.main-tbl th, table.main-tbl td{border:1px solid #000;padding:2px 4px;}
 table.main-tbl th{font-size:8.5pt;font-weight:bold;text-align:center;}
-
 .meta-box{width:100%;border-collapse:collapse;margin-bottom:-1px;}
 .meta-box td{border:1px solid #000;padding:3px 5px;vertical-align:top;}
-
 .footer-tbl{width:100%;border-collapse:collapse;margin-top:-1px;}
 .footer-tbl td{border:1px solid #000;padding:4px 5px;}
 .sign-area{text-align:right;vertical-align:bottom;height:40px;}
@@ -453,8 +441,8 @@ table.main-tbl th{font-size:8.5pt;font-weight:bold;text-align:center;}
 <body>
   <div class="top-header">CELL: ${PHONE_NO}</div>
   <div class="shop-title">${SHOP}</div>
+  <div class="shop-subtitle">PREMIUM SANITARYWARES &amp; TILES</div>
   <div class="bill-type">Q BILL</div>
-
   <table class="meta-box">
     <tr>
       <td style="width:55%;"><b>To :</b> <span class="highlight-red">${custName}</span></td>
@@ -465,7 +453,6 @@ table.main-tbl th{font-size:8.5pt;font-weight:bold;text-align:center;}
       </td>
     </tr>
   </table>
-
   <table class="main-tbl">
     <thead>
       <tr>
@@ -493,7 +480,6 @@ table.main-tbl th{font-size:8.5pt;font-weight:bold;text-align:center;}
       </tr>
     </tbody>
   </table>
-
   <table class="footer-tbl">
     <tr>
       <td style="font-weight:bold;font-size:8.5pt;vertical-align:top;color:#6c757d;">
@@ -506,14 +492,12 @@ table.main-tbl th{font-size:8.5pt;font-weight:bold;text-align:center;}
     </tr>
   </table>
 </body></html>`;
-
   const win=window.open("","_blank","width=600,height=800");
   win.document.write(html);
   win.document.close();
   win.focus();
   setTimeout(()=>{win.print();win.close();},500);
 }
-
 async function sharePDF(){
   const btn=document.getElementById("sharePdfBtn");
   const orig=btn.innerText;btn.innerText="⏳...";btn.disabled=true;
@@ -529,7 +513,6 @@ async function sharePDF(){
   }catch(e){alert("PDF error: "+e.message);}
   btn.innerText=orig;btn.disabled=false;
 }
-
 // Product dropdown for alter
 function showProdDrop(inputEl,rowId,fieldType){
   activeInput=inputEl;activeAlterRow=rowId;dropIdx=-1;
@@ -565,7 +548,6 @@ function pickAlterProduct(e,pid,name,code){
   loadAlterBatches(id,pid,null);
   setTimeout(()=>{const q=document.getElementById("arqty_"+id);if(q)q.focus();},50);
 }
-
 function loadAlterBatches(rowId,pid,curBatch){
   if(!pid)return;
   const sel=document.getElementById("arbatch_"+rowId);
@@ -582,7 +564,6 @@ function loadAlterBatches(rowId,pid,curBatch){
     }
   });
 }
-
 function onAB(rowId){
   const sel=document.getElementById("arbatch_"+rowId);
   const opt=sel.options[sel.selectedIndex];
@@ -591,7 +572,6 @@ function onAB(rowId){
     calcAR(rowId);
   }
 }
-
 // Alter Section Visibility
 function showAlterSection(){
   document.getElementById("alterSection").style.display="block";
@@ -600,7 +580,6 @@ function showAlterSection(){
 function hideAlterSection(){
   document.getElementById("alterSection").style.display="none";
 }
-
 // Alter Rows Setup
 function buildAlterRows(b){
   document.getElementById("alterBody").innerHTML="";
@@ -610,7 +589,6 @@ function buildAlterRows(b){
   if(b.items&&b.items.length) b.items.forEach(item=>addAlterRowFromItem(item));
   calcAT();
 }
-
 function addAlterRowFromItem(item){
   alterRowCount++;const id=alterRowCount;
   const tr=document.createElement("tr");tr.id="arow_"+id;
@@ -639,7 +617,6 @@ function addAlterRowFromItem(item){
   document.getElementById("alterBody").appendChild(tr);
   if(item.product_id) loadAlterBatches(id, item.product_id, item.batch_id);
 }
-
 function addAlterRow(){
   alterRowCount++;const id=alterRowCount;
   const tr=document.createElement("tr");tr.id="arow_"+id;
@@ -662,7 +639,6 @@ function addAlterRow(){
     <td><button class="danger" onclick="delAR(${id},'new')" style="padding:3px 7px;font-size:11px;">✕</button></td>`;
   document.getElementById("alterBody").appendChild(tr);
 }
-
 function delAR(rowId, item_id){
   const row=document.getElementById("arow_"+rowId);
   if(row) row.remove();
@@ -671,14 +647,12 @@ function delAR(rowId, item_id){
   }
   calcAT();
 }
-
 function calcAR(rowId){
   const qty=parseFloat(document.getElementById("arqty_"+rowId).value)||0;
   const rate=parseFloat(document.getElementById("arrate_"+rowId).value)||0;
   document.getElementById("aramt_"+rowId).value = (qty * rate).toFixed(2);
   calcAT();
 }
-
 function calcAT(){
   let total=0;
   const rows=document.querySelectorAll("#alterBody tr");
@@ -688,13 +662,11 @@ function calcAT(){
   });
   document.getElementById("alterTotal").innerText="Total: ₹" + total.toFixed(2);
 }
-
 // Save Changes
 function saveAlter(){
   if(!currentBill) return;
   const rows=document.querySelectorAll("#alterBody tr");
   const items=[];
-
   for(let tr of rows){
     const rowId = tr.id.replace("arow_","");
     const item_id = document.getElementById("ariid_"+rowId).value;
@@ -703,14 +675,12 @@ function saveAlter(){
     const qty = parseInt(document.getElementById("arqty_"+rowId).value)||0;
     const rate = parseFloat(document.getElementById("arrate_"+rowId).value)||0;
     const total_amount = parseFloat(document.getElementById("aramt_"+rowId).value)||0;
-
     if(!product_id){
       alert("Please select a product for all rows.");
       return;
     }
     items.push({ item_id, batch_id, product_id, quantity: qty, rate, total_amount });
   }
-
   fetch(API + "/update-bill/" + currentBill.bill_id, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
@@ -727,12 +697,10 @@ function saveAlter(){
   })
   .catch(err => alert("Error saving bill changes: " + err.message));
 }
-
 // Cancel Bill
 function doCancelBill(){
   if(!currentBill) return;
   if(!confirm("Are you sure you want to cancel Bill Q-" + (currentBill.bill_no || currentBill.bill_id) + "? This will restore stock quantities.")) return;
-
   fetch(API + "/cancel-bill/" + currentBill.bill_id, { method: "POST" })
   .then(r => r.json())
   .then(data => {
