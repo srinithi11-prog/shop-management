@@ -151,6 +151,10 @@ let allCustomers=[],allProducts=[],currentBill=null;
 let alterRowCount=0,deletedItemIds=[];
 let activeInput=null,activeAlterRow=null,dropIdx=-1,nameIdx=-1;
 
+function esc(str){
+  return String(str || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
 window.addEventListener("DOMContentLoaded",()=>{
   fetch(API+"/customers").then(r=>r.json()).then(d=>{allCustomers=d;}).catch(()=>{});
   fetch(API+"/products").then(r=>r.json()).then(d=>{allProducts=d;}).catch(()=>{});
@@ -168,7 +172,7 @@ function loadOutstanding(){
   fetch(API+"/outstanding-credits").then(r=>r.json()).then(data=>{
     const tbody=document.getElementById("outstandingBody");
     tbody.innerHTML="";
-    if(!data.length){tbody.innerHTML=`<tr><td colspan="7" style="color:#888;">No outstanding credits</td></tr>`;document.getElementById("outstandingTotal").innerText="";return;}
+    if(!data || !data.length){tbody.innerHTML=`<tr><td colspan="7" style="color:#888;">No outstanding credits</td></tr>`;document.getElementById("outstandingTotal").innerText="";return;}
     let total=0;
     data.forEach(b=>{
       const out=parseFloat(b.outstanding)||0;total+=out;
@@ -183,7 +187,7 @@ function loadOutstanding(){
       </tr>`;
     });
     document.getElementById("outstandingTotal").innerText="Total Outstanding: ₹"+total.toFixed(2);
-  });
+  }).catch(()=>{});
 }
 
 // Name search
@@ -281,7 +285,7 @@ function toWords(n){
   return toWords(Math.floor(n/10000000))+" Crore"+(n%10000000?" "+toWords(n%10000000):"");
 }
 
-// Display invoice on screen (20 Rows, Vertical Orientation)
+// Display invoice on screen
 function buildInvoiceDisplay(b){
   const dateStr=new Date(b.bill_date).toLocaleDateString("en-IN");
   const custName=b.customer&&b.customer!=="Walk-in"?b.customer:(b.walkin_name||"Walk-in");
@@ -300,7 +304,7 @@ function buildInvoiceDisplay(b){
       const qtyVal = parseInt(item.quantity||0);
       totalQty += qtyVal;
       rows += `<tr style="height:18px;">
-        <td style="text-align:left;border:1px solid #000;padding:2px 6px;">${item.product||item.product_name||"-"}</td>
+        <td style="text-align:left;border:1px solid #000;padding:2px 6px;font-size:11px;color:#6c757d;">${item.product||item.product_name||"-"}</td>
         <td style="text-align:center;border:1px solid #000;padding:2px 6px;">${qtyVal} Nos</td>
         <td style="text-align:right;border:1px solid #000;padding:2px 6px;">${parseFloat(item.rate||0).toFixed(2)}</td>
         <td style="text-align:right;border:1px solid #000;padding:2px 6px;">${parseFloat(item.total_amount||0).toFixed(2)}</td>
@@ -320,7 +324,7 @@ function buildInvoiceDisplay(b){
     <div style="font-family:'Arial',sans-serif;padding:20px;border:1px solid #000;background:#fff;width:100%;max-width:550px;margin:auto;">
       <div style="text-align:right;font-size:11px;font-weight:bold;">CELL: ${PHONE_NO}</div>
       <div style="text-align:center;margin-bottom:12px;">
-        <div style="font-size:22px;font-weight:bold;letter-spacing:1px;">${SHOP}</div>
+        <div style="font-size:22px;font-weight:bold;letter-spacing:1px;color:#00b4d8;">${SHOP}</div>
         <div style="font-size:14px;font-weight:bold;margin-top:2px;">Q BILL</div>
       </div>
       
@@ -362,14 +366,14 @@ function buildInvoiceDisplay(b){
           </tr>
           <tr>
             <td colspan="3" style="border:1px solid #000;padding:4px;text-align:right;font-weight:bold;font-size:14px;">Net Amount :</td>
-            <td style="border:1px solid #000;padding:4px;text-align:right;font-weight:bold;font-size:14px;">₹${netAmount.toFixed(2)}</td>
+            <td style="border:1px solid #000;padding:4px;text-align:right;font-weight:bold;font-size:14px;color:#28a745;">₹${netAmount.toFixed(2)}</td>
           </tr>
         </tfoot>
       </table>
 
       <table style="width:100%;border-collapse:collapse;border:1px solid #000;margin-top:-1px;">
         <tr>
-          <td style="border:1px solid #000;padding:8px;font-weight:bold;font-size:12px;text-align:left;vertical-align:top;">
+          <td style="border:1px solid #000;padding:8px;font-weight:bold;font-size:12px;text-align:left;vertical-align:top;color:#6c757d;">
             ${amtWords}
           </td>
           <td style="border:1px solid #000;padding:8px;text-align:right;width:180px;vertical-align:bottom;">
@@ -381,7 +385,7 @@ function buildInvoiceDisplay(b){
     </div>`;
 }
 
-// Print Bill - Exactly 20 Rows
+// Print Bill
 function printBill(){
   if(!currentBill){alert("No bill to print");return;}
   const b=currentBill;
@@ -402,7 +406,7 @@ function printBill(){
       const qtyVal = parseInt(item.quantity||0);
       totalQty += qtyVal;
       itemRows += `<tr>
-        <td style="text-align:left;">${item.product||item.product_name||"-"}</td>
+        <td style="text-align:left;font-size:11px;color:#6c757d;">${item.product||item.product_name||"-"}</td>
         <td style="text-align:center;">${qtyVal} Nos</td>
         <td style="text-align:right;">${parseFloat(item.rate||item.selling_price||0).toFixed(2)}</td>
         <td style="text-align:right;">${parseFloat(item.total_amount||0).toFixed(2)}</td>
@@ -418,7 +422,7 @@ function printBill(){
 @page{size:A5 portrait;margin:5mm;}
 body{font-family:Arial,sans-serif;font-size:9pt;line-height:1.15;padding:2mm;background:#fff;}
 .top-header{text-align:right;font-size:8.5pt;font-weight:bold;margin-bottom:2px;}
-.shop-title{text-align:center;font-size:16pt;font-weight:bold;letter-spacing:1px;}
+.shop-title{text-align:center;font-size:16pt;font-weight:bold;letter-spacing:1px;color:#00b4d8;}
 .bill-type{text-align:center;font-size:10pt;font-weight:bold;margin-bottom:4px;}
 
 table.main-tbl{width:100%;border-collapse:collapse;margin-top:0px;}
@@ -472,14 +476,14 @@ table.main-tbl th{font-size:8.5pt;font-weight:bold;text-align:center;}
       </tr>
       <tr>
         <td colspan="3" style="text-align:right;font-weight:bold;font-size:9.5pt;">Net Amount :</td>
-        <td style="text-align:right;font-weight:bold;font-size:9.5pt;">${netAmount.toFixed(2)}</td>
+        <td style="text-align:right;font-weight:bold;font-size:9.5pt;color:#28a745;">${netAmount.toFixed(2)}</td>
       </tr>
     </tbody>
   </table>
 
   <table class="footer-tbl">
     <tr>
-      <td style="font-weight:bold;font-size:8.5pt;vertical-align:top;">
+      <td style="font-weight:bold;font-size:8.5pt;vertical-align:top;color:#6c757d;">
         ${amtWords}
       </td>
       <td class="sign-area" style="width:150px;">
@@ -548,6 +552,7 @@ function pickAlterProduct(e,pid,name,code){
   loadAlterBatches(id,pid,null);
   setTimeout(()=>{const q=document.getElementById("arqty_"+id);if(q)q.focus();},50);
 }
+
 function loadAlterBatches(rowId,pid,curBatch){
   if(!pid)return;
   const sel=document.getElementById("arbatch_"+rowId);
@@ -555,12 +560,35 @@ function loadAlterBatches(rowId,pid,curBatch){
   fetch(API+"/batches/"+pid).then(r=>r.json()).then(batches=>{
     if(!batches.length){sel.innerHTML=`<option value="">No stock</option>`;return;}
     sel.innerHTML=`<option value="">— Select price —</option>`;
-    batches.forEach(b=>{sel.innerHTML+=`<option value="${b.batch_id}" data-mrp="${b.mrp}" ${b.batch_id==curBatch?"selected":""}>₹${parseFloat(b.mrp).toFixed(2)} | Stk:${b.remaining_quantity}</option>`;});
-    if(curBatch){const opt=sel.querySelector(`option[value="${curBatch}"]`);if(opt&&opt.dataset.mrp)document.getElementById("arrate_"+rowId).value=parseFloat(opt.dataset.mrp).toFixed(2);}
+    batches.forEach(b=>{
+      sel.innerHTML+=`<option value="${b.batch_id}" data-mrp="${b.mrp}" ${b.batch_id==curBatch?"selected":""}>₹${parseFloat(b.mrp).toFixed(2)} | Stk:${b.remaining_quantity}</option>`;
+    });
+    if(curBatch){
+      const opt=sel.querySelector(`option[value="${curBatch}"]`);
+      if(opt&&opt.dataset.mrp) document.getElementById("arrate_"+rowId).value=parseFloat(opt.dataset.mrp).toFixed(2);
+    }
   });
 }
 
-// Alter rows
+function onAB(rowId){
+  const sel=document.getElementById("arbatch_"+rowId);
+  const opt=sel.options[sel.selectedIndex];
+  if(opt && opt.dataset.mrp){
+    document.getElementById("arrate_"+rowId).value = parseFloat(opt.dataset.mrp).toFixed(2);
+    calcAR(rowId);
+  }
+}
+
+// Alter Section Visibility
+function showAlterSection(){
+  document.getElementById("alterSection").style.display="block";
+  document.getElementById("alterSection").scrollIntoView({behavior:"smooth"});
+}
+function hideAlterSection(){
+  document.getElementById("alterSection").style.display="none";
+}
+
+// Alter Rows Setup
 function buildAlterRows(b){
   document.getElementById("alterBody").innerHTML="";
   alterRowCount=0;
@@ -569,6 +597,7 @@ function buildAlterRows(b){
   if(b.items&&b.items.length) b.items.forEach(item=>addAlterRowFromItem(item));
   calcAT();
 }
+
 function addAlterRowFromItem(item){
   alterRowCount++;const id=alterRowCount;
   const tr=document.createElement("tr");tr.id="arow_"+id;
@@ -595,72 +624,114 @@ function addAlterRowFromItem(item){
     <td><input type="number" id="aramt_${id}" value="${parseFloat(item.total_amount||0).toFixed(2)}" oninput="calcAT()"></td>
     <td><button class="danger" onclick="delAR(${id},'${item.item_id!=null?item.item_id:'new'}')" style="padding:3px 7px;font-size:11px;">✕</button></td>`;
   document.getElementById("alterBody").appendChild(tr);
-  if(item.product_id)loadAlterBatches(id,item.product_id,item.batch_id);
+  if(item.product_id) loadAlterBatches(id, item.product_id, item.batch_id);
+}
+
+function addAlterRow(){
+  alterRowCount++;const id=alterRowCount;
+  const tr=document.createElement("tr");tr.id="arow_"+id;
+  tr.innerHTML=`
+    <td>${id}</td>
+    <td><input id="arcode_${id}" placeholder="Code"
+      oninput="showProdDrop(this,${id},'code')" onfocus="showProdDrop(this,${id},'code')"
+      onkeydown="handleAlterKey(event,${id},'code')" autocomplete="off"></td>
+    <td><input id="arname_${id}" placeholder="Name"
+      oninput="showProdDrop(this,${id},'name')" onfocus="showProdDrop(this,${id},'name')"
+      onkeydown="handleAlterKey(event,${id},'name')" autocomplete="off">
+      <div class="selected-tag" id="artag_${id}"></div>
+      <input type="hidden" id="arpid_${id}">
+      <input type="hidden" id="ariid_${id}" value="new">
+    </td>
+    <td><select id="arbatch_${id}" onchange="onAB(${id})"><option value="">Select item first</option></select></td>
+    <td><input type="number" id="arqty_${id}" value="1" min="1" oninput="calcAR(${id})"></td>
+    <td><input type="number" id="arrate_${id}" value="0.00" oninput="calcAR(${id})"></td>
+    <td><input type="number" id="aramt_${id}" value="0.00" oninput="calcAT()"></td>
+    <td><button class="danger" onclick="delAR(${id},'new')" style="padding:3px 7px;font-size:11px;">✕</button></td>`;
+  document.getElementById("alterBody").appendChild(tr);
+}
+
+function delAR(rowId, item_id){
+  const row=document.getElementById("arow_"+rowId);
+  if(row) row.remove();
+  if(item_id !== 'new' && item_id != null) {
+    deletedItemIds.push(item_id);
+  }
   calcAT();
 }
-function addAlterRow(){
-  if(!allProducts.length)fetch(API+"/products").then(r=>r.json()).then(d=>{allProducts=d;addAlterRowFromItem({product_id:"",product:"",product_code:"",batch_id:"",quantity:1,rate:0,total_amount:0,item_id:"new"});});
-  else addAlterRowFromItem({product_id:"",product:"",product_code:"",batch_id:"",quantity:1,rate:0,total_amount:0,item_id:"new"});
+
+function calcAR(rowId){
+  const qty=parseFloat(document.getElementById("arqty_"+rowId).value)||0;
+  const rate=parseFloat(document.getElementById("arrate_"+rowId).value)||0;
+  document.getElementById("aramt_"+rowId).value = (qty * rate).toFixed(2);
+  calcAT();
 }
-function onAB(id){const sel=document.getElementById("arbatch_"+id);const opt=sel.options[sel.selectedIndex];if(!opt||!opt.dataset.mrp)return;document.getElementById("arrate_"+id).value=parseFloat(opt.dataset.mrp).toFixed(2);calcAR(id);}
-function calcAR(id){const q=parseFloat(document.getElementById("arqty_"+id).value)||0;const r=parseFloat(document.getElementById("arrate_"+id).value)||0;document.getElementById("aramt_"+id).value=(q*r).toFixed(2);calcAT();}
-function delAR(id,iid){if(iid&&iid!=="new")deletedItemIds.push(iid);const el=document.getElementById("arow_"+id);if(el)el.remove();calcAT();}
-function calcAT(){let t=0;for(let i=1;i<=alterRowCount;i++){const el=document.getElementById("aramt_"+i);if(el)t+=parseFloat(el.value)||0;}document.getElementById("alterTotal").innerText="New Total: ₹"+t.toFixed(2);}
-function showAlterSection(){
-  if(!allProducts.length)fetch(API+"/products").then(r=>r.json()).then(d=>{allProducts=d;});
-  document.getElementById("alterSection").style.display="block";
-  document.getElementById("alterSection").scrollIntoView({behavior:"smooth"});
-}
-function hideAlterSection(){document.getElementById("alterSection").style.display="none";}
-function saveAlter(){
-  const items=[];
-  for(let i=1;i<=alterRowCount;i++){
-    const row=document.getElementById("arow_"+i);if(!row)continue;
-    const iid=document.getElementById("ariid_"+i).value;
-    const pid=document.getElementById("arpid_"+i).value;
-    const bid=document.getElementById("arbatch_"+i).value;
-    const qty=parseInt(document.getElementById("arqty_"+i).value)||0;
-    const rate=parseFloat(document.getElementById("arrate_"+i).value)||0;
-    const amt=parseFloat(document.getElementById("aramt_"+i).value)||0;
-    if(qty<=0||rate<=0)continue;
-    const itemId=(iid&&iid!=="new"&&!isNaN(parseInt(iid)))?parseInt(iid):"new";
-    items.push({item_id:itemId,product_id:pid||null,batch_id:bid||null,quantity:qty,rate,total_amount:amt});
-  }
-  if(!items.length){alert("Add at least one item");return;}
-  fetch(API+"/alter-bill/"+currentBill.bill_no,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({items,deleted_item_ids:deletedItemIds})})
-  .then(r=>r.json()).then(d=>{
-    if(d.error){alert("Error: "+d.error);return;}
-    alert("✅ Bill updated! New total: ₹"+d.new_total.toFixed(2));
-    deletedItemIds=[];
-    viewBill(currentBill.bill_id);
-    loadOutstanding();
-  }).catch(err => {
-    alert("Network error: " + err.message);
+
+function calcAT(){
+  let total=0;
+  const rows=document.querySelectorAll("#alterBody tr");
+  rows.forEach(tr=>{
+    const amtInput=tr.querySelector("input[id^='aramt_']");
+    if(amtInput) total += parseFloat(amtInput.value)||0;
   });
+  document.getElementById("alterTotal").innerText="Total: ₹" + total.toFixed(2);
+}
+
+// Save Changes
+function saveAlter(){
+  if(!currentBill) return;
+  const rows=document.querySelectorAll("#alterBody tr");
+  const items=[];
+
+  for(let tr of rows){
+    const rowId = tr.id.replace("arow_","");
+    const item_id = document.getElementById("ariid_"+rowId).value;
+    const batch_id = document.getElementById("arbatch_"+rowId).value;
+    const product_id = document.getElementById("arpid_"+rowId).value;
+    const qty = parseInt(document.getElementById("arqty_"+rowId).value)||0;
+    const rate = parseFloat(document.getElementById("arrate_"+rowId).value)||0;
+    const total_amount = parseFloat(document.getElementById("aramt_"+rowId).value)||0;
+
+    if(!product_id){
+      alert("Please select a product for all rows.");
+      return;
+    }
+    items.push({ item_id, batch_id, product_id, quantity: qty, rate, total_amount });
+  }
+
+  fetch(API + "/update-bill/" + currentBill.bill_id, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ items, deletedItemIds })
+  })
+  .then(r => r.json())
+  .then(data => {
+    if(data.success){
+      alert("Bill updated successfully!");
+      viewBill(currentBill.bill_id);
+    } else {
+      alert("Failed to update bill: " + (data.error || "Unknown error"));
+    }
+  })
+  .catch(err => alert("Error saving bill changes: " + err.message));
 }
 
 // Cancel Bill
-function doCancelBill() {
-  if (!currentBill) return;
-  if (!confirm("Are you sure you want to cancel Q-" + currentBill.bill_no + "? This will restore inventory stock.")) return;
+function doCancelBill(){
+  if(!currentBill) return;
+  if(!confirm("Are you sure you want to cancel Bill Q-" + (currentBill.bill_no || currentBill.bill_id) + "? This will restore stock quantities.")) return;
 
-  fetch(API + "/cancel-bill/" + currentBill.bill_no, { method: "DELETE" })
-    .then(r => r.json())
-    .then(d => {
-      if (d.error) {
-        alert("Error: " + d.error);
-        return;
-      }
-      alert("✅ Bill cancelled successfully!");
+  fetch(API + "/cancel-bill/" + currentBill.bill_id, { method: "POST" })
+  .then(r => r.json())
+  .then(data => {
+    if(data.success){
+      alert("Bill cancelled successfully.");
       viewBill(currentBill.bill_id);
       loadOutstanding();
-    })
-    .catch(err => alert("Network error: " + err.message));
-}
-
-function esc(str) {
-  if (!str) return "";
-  return String(str).replace(/"/g, "&quot;").replace(/'/g, "\\'");
+    } else {
+      alert("Error cancelling bill: " + (data.error || "Failed"));
+    }
+  })
+  .catch(err => alert("Error: " + err.message));
 }
 </script>
 </body>
