@@ -69,7 +69,7 @@
 <div class="container">
   <!-- Outstanding Credits -->
   <div class="card outstanding-box">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;"></div>
       <h3 style="color:#856404;">💳 Outstanding Credits</h3>
       <button onclick="loadOutstanding()" style="background:#856404;padding:5px 12px;font-size:12px;">Refresh</button>
     </div>
@@ -311,10 +311,12 @@ function buildInvoiceDisplay(b){
     <div style="font-family:'Arial',sans-serif;padding:20px;border:1px solid #000;background:#fff;width:100%;max-width:550px;margin:auto;">
       <div style="text-align:right;font-size:11px;font-weight:bold;">CELL: ${PHONE_NO}</div>
       <div style="text-align:center;margin-bottom:12px;">
-        <!-- SUN CERAMIC with Subtitle -->
-        <div style="font-family:'Cinzel Decorative', 'Montserrat', 'Playfair Display', serif;font-size:28px;font-weight:900;letter-spacing:3px;text-transform:uppercase;background:linear-gradient(45deg, #007bff, #00b4d8);-webkit-background-clip:text;-webkit-text-fill-color:transparent;text-shadow:2px 2px 4px rgba(0,0,0,0.15);padding:2px 0;">${SHOP}</div>
-        <div style="font-size:11px;font-weight:700;letter-spacing:2px;color:#6c757d;text-transform:uppercase;margin-top:2px;">PREMIUM SANITARYWARES &amp; TILES</div>
-        <div style="font-size:13px;font-weight:bold;letter-spacing:2px;margin-top:6px;color:#333;">Q BILL</div>
+        <!-- SUN CERAMIC and Subtitle enclosed inside a bordered box -->
+        <div style="border:2px solid #000;padding:8px 16px;display:inline-block;margin-bottom:6px;">
+          <div style="font-family:'Cinzel Decorative', 'Montserrat', 'Playfair Display', serif;font-size:28px;font-weight:900;letter-spacing:3px;text-transform:uppercase;background:linear-gradient(45deg, #007bff, #00b4d8);-webkit-background-clip:text;-webkit-text-fill-color:transparent;text-shadow:2px 2px 4px rgba(0,0,0,0.15);padding:2px 0;">${SHOP}</div>
+          <div style="font-size:11px;font-weight:700;letter-spacing:2px;color:#6c757d;text-transform:uppercase;margin-top:2px;">PREMIUM SANITARYWARES &amp; TILES</div>
+        </div>
+        <div style="font-size:13px;font-weight:bold;letter-spacing:2px;margin-top:2px;color:#333;">Q BILL</div>
       </div>
       
       <table style="width:100%;border-collapse:collapse;border:1px solid #000;margin-bottom:-1px;">
@@ -407,8 +409,17 @@ function printBill(){
 @page{size:A5 portrait;margin:5mm;}
 body{font-family:Arial,sans-serif;font-size:9pt;line-height:1.15;padding:2mm;background:#fff;}
 .top-header{text-align:right;font-size:8.5pt;font-weight:bold;margin-bottom:2px;}
-.shop-title{
+.shop-box{
+  border:1.5pt solid #000;
+  padding:4px 10px;
   text-align:center;
+  display:inline-block;
+  margin-bottom:3px;
+}
+.header-container{
+  text-align:center;
+}
+.shop-title{
   font-family:'Cinzel Decorative', 'Montserrat', serif;
   font-size:18pt;
   font-weight:900;
@@ -418,7 +429,6 @@ body{font-family:Arial,sans-serif;font-size:9pt;line-height:1.15;padding:2mm;bac
   -webkit-text-stroke:0.5px #000;
 }
 .shop-subtitle{
-  text-align:center;
   font-size:8pt;
   font-weight:bold;
   letter-spacing:1.5px;
@@ -426,7 +436,7 @@ body{font-family:Arial,sans-serif;font-size:9pt;line-height:1.15;padding:2mm;bac
   text-transform:uppercase;
   margin-top:1px;
 }
-.bill-type{text-align:center;font-size:10pt;font-weight:bold;margin-top:3px;margin-bottom:4px;letter-spacing:1px;}
+.bill-type{text-align:center;font-size:10pt;font-weight:bold;margin-top:2px;margin-bottom:4px;letter-spacing:1px;}
 table.main-tbl{width:100%;border-collapse:collapse;margin-top:0px;}
 table.main-tbl th, table.main-tbl td{border:1px solid #000;padding:2px 4px;}
 table.main-tbl th{font-size:8.5pt;font-weight:bold;text-align:center;}
@@ -440,8 +450,12 @@ table.main-tbl th{font-size:8.5pt;font-weight:bold;text-align:center;}
 </head>
 <body>
   <div class="top-header">CELL: ${PHONE_NO}</div>
-  <div class="shop-title">${SHOP}</div>
-  <div class="shop-subtitle">PREMIUM SANITARYWARES &amp; TILES</div>
+  <div class="header-container">
+    <div class="shop-box">
+      <div class="shop-title">${SHOP}</div>
+      <div class="shop-subtitle">PREMIUM SANITARYWARES &amp; TILES</div>
+    </div>
+  </div>
   <div class="bill-type">Q BILL</div>
   <table class="meta-box">
     <tr>
