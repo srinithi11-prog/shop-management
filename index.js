@@ -1045,9 +1045,54 @@ app.put("/alter-bill/:id", (req, res) => {
       if (total_ops === 0) return finish();
       if (existing.length) {
         existing.forEach(item => {
-          db.query("UPDATE bill_items SET selling_price=?, total_amount=?, quantity=? WHERE item_id=?",
-            [item.rate, item.total_amount, item.quantity, item.item_id],
-            () => checkDone());
+          // Restore old batch stock if batch changed
+          db.query("SELECT batch_id, quantity FROM bill_items WHERE item_id=?", [item.item_id], (e, oldRows) => {
+            if (oldRows && oldRows.length) {
+              const oldBatchId = oldRows[0].batch_id;
+              const oldQty = oldRows[0].quantity;
+              const newBatchId = item.batch_id || null;
+              const newQty = item.quantity;
+
+              const doUpdate = () => {
+                // Get product hsn_code
+                const hsnQuery = item.product_id
+                  ? "SELECT hsn_code FROM products WHERE product_id=?"
+                  : null;
+                const getHsn = (cb) => {
+                  if (!item.product_id) return cb("");
+                  db.query(hsnQuery, [item.product_id], (e, r) => cb(r && r.length ? r[0].hsn_code || "" : ""));
+                };
+                getHsn((hsn) => {
+                  db.query(
+                    "UPDATE bill_items SET selling_price=?, total_amount=?, quantity=?, batch_id=?, product_id=?, hsn_code=? WHERE item_id=?",
+                    [item.rate, item.total_amount, newQty, newBatchId, item.product_id || null, hsn, item.item_id],
+                    () => checkDone()
+                  );
+                });
+              };
+
+              if (oldBatchId && oldBatchId !== newBatchId) {
+                // Restore stock to old batch
+                db.query("UPDATE product_batches SET remaining_quantity = remaining_quantity + ? WHERE batch_id=?",
+                  [oldQty, oldBatchId], () => {
+                    // Deduct from new batch
+                    if (newBatchId) {
+                      db.query("UPDATE product_batches SET remaining_quantity = remaining_quantity - ? WHERE batch_id=?",
+                        [newQty, newBatchId], doUpdate);
+                    } else doUpdate();
+                  });
+              } else if (oldBatchId && oldBatchId === newBatchId && oldQty !== newQty) {
+                // Same batch, quantity changed — adjust stock
+                const diff = newQty - oldQty;
+                db.query("UPDATE product_batches SET remaining_quantity = remaining_quantity - ? WHERE batch_id=?",
+                  [diff, oldBatchId], doUpdate);
+              } else {
+                doUpdate();
+              }
+            } else {
+              checkDone();
+            }
+          });
         });
       }
       if (newItems.length) {
@@ -1429,6 +1474,7 @@ app.get("/outstanding-credits", (req, res) => {
     FROM bills b
     LEFT JOIN customers c ON b.customer_id=c.customer_id
     WHERE b.payment_mode='CREDIT' AND b.cancelled=0
+      AND COALESCE(c.balance, 0) > 0
     ORDER BY b.bill_date DESC
   `, (err, r) => {
     if (err) return res.json([]);

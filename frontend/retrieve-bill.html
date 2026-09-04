@@ -339,42 +339,48 @@ function printBill(){
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
 @page{size:148mm 105mm;margin:0;}
-html{margin:0;padding:0;}
-body{
-  width:148mm;
-  height:105mm;
-  overflow:hidden;
-  font-family:'Courier New',monospace;
-  font-size:9pt;
-  line-height:1.3;
-  padding:3mm 4mm;
-  display:flex;
-  flex-direction:column;
+html,body{width:148mm;height:105mm;overflow:hidden;
+  font-family:'Courier New',monospace;font-size:9pt;line-height:1.3;
+  padding:3mm 4mm;display:flex;flex-direction:column;}
+.header{text-align:center;margin-bottom:3px;}
+.shop-name{
+  font-size:20pt;
+  font-weight:900;
+  letter-spacing:3px;
+  text-transform:uppercase;
+  border-bottom:2px solid #000;
+  padding-bottom:2px;
+  margin-bottom:2px;
+  display:inline-block;
+  width:100%;
 }
-.header{text-align:center;margin-bottom:2px;}
-.header h2{font-size:13pt;font-weight:bold;letter-spacing:1px;margin:0;padding:0;}
-.header .sub{font-size:8pt;margin:0;padding:0;}
-.header .bt{font-size:9.5pt;font-weight:bold;margin:0;padding:0;}
+.shop-phone{font-size:9pt;margin:1px 0;}
+.bill-type{
+  font-size:11pt;
+  font-weight:bold;
+  letter-spacing:2px;
+  margin-top:2px;
+}
 hr{border:none;border-top:1px solid #000;margin:2px 0;}
 hr.tk{border-top:1.5px solid #000;}
-.meta{display:flex;justify-content:space-between;font-size:8pt;padding:2px 0;}
+.meta{display:flex;justify-content:space-between;font-size:8.5pt;padding:2px 0;}
 .meta-right{text-align:right;}
 table{width:100%;border-collapse:collapse;flex:1;}
 th{border:0.7px solid #333;padding:2px 3px;font-size:8pt;font-weight:bold;text-align:center;background:#f0f0f0;}
 td{border:0.7px solid #333;padding:1px 3px;font-size:8.5pt;}
 .tfoot td{font-weight:bold;}
 .footer{margin-top:2px;}
-.frow{display:flex;justify-content:space-between;font-size:8pt;}
+.frow{display:flex;justify-content:space-between;font-size:8.5pt;}
 .words{font-style:italic;font-size:7.5pt;flex:1;}
-.netamt{font-weight:bold;font-size:9pt;}
-.sign{text-align:right;font-size:8pt;margin-top:2px;}
+.netamt{font-weight:bold;font-size:9.5pt;}
+.sign{text-align:right;font-size:8.5pt;margin-top:3px;font-weight:bold;}
 </style>
 </head>
 <body>
   <div class="header">
-    <h2>SUN CERAMIC</h2>
-    <div class="sub">CELL: 9942607766</div>
-    <div class="bt">Q BILL</div>
+    <div class="shop-name">SUN CERAMIC</div>
+    <div class="shop-phone">CELL: 9942607766</div>
+    <div class="bill-type">Q BILL</div>
   </div>
   <hr class="tk">
   <div class="meta">
