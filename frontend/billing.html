@@ -48,23 +48,6 @@
     .cust-drop{position:absolute;top:100%;left:0;width:100%;background:white;border:1px solid #aaa;border-radius:6px;max-height:200px;overflow-y:auto;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,0.15);display:none;}
     .cust-drop-item{padding:8px 12px;cursor:pointer;border-bottom:1px solid #f0f0f0;font-size:13px;}
     .cust-drop-item:hover,.cust-drop-item.dp-active{background:#e8f0ff;}
-      
-    #invoiceArea{font-family:'Courier New',monospace;padding:10px;background:white;max-width:200mm;margin:auto;}
-    .ih{text-align:center;margin-bottom:4px;}.ih h2{font-size:14pt;font-weight:bold;letter-spacing:1px;}.ih p{font-size:8pt;margin:1px 0;}
-    .iline{border-top:1.5px solid #333;margin:3px 0;}
-    .imeta{display:flex;justify-content:space-between;margin:4px 0;font-size:8pt;}
-    .itbl{width:100%;border-collapse:collapse;margin:4px 0;font-size:8pt;}.itbl th,.itbl td{border:1px solid #333;padding:3px 5px;}.itbl th{text-align:center;font-weight:bold;}
-    .ifooter{font-size:8pt;margin-top:3px;}.isign{text-align:right;margin-top:10px;font-size:8pt;}
-    
-    /* Optimized Print rules for A5 (Half A4) */
-    @media print {
-      @page { size: 210mm 148mm; margin: 5mm; }
-      body { margin: 0; padding: 0; background: white; }
-      body * { visibility: hidden; }
-      #invoiceArea, #invoiceArea * { visibility: visible; }
-      #invoiceArea { position: absolute; left: 0; top: 0; width: 100%; padding: 0; }
-      .no-print { display: none !important; }
-    }
   </style>
 </head>
 <body>
@@ -394,33 +377,244 @@ function showInvoice(bill_id){
   });
 }
 
+// Helper function to convert number to words
+function toWords(n){
+  const a=["","One","Two","Three","Four","Five","Six","Seven","Eight","Nine","Ten","Eleven","Twelve","Thirteen","Fourteen","Fifteen","Sixteen","Seventeen","Eighteen","Nineteen"];
+  const t=["","","Twenty","Thirty","Forty","Fifty","Sixty","Seventy","Eighty","Ninety"];
+  n=Math.round(n);if(n===0)return"Zero";if(n<20)return a[n];if(n<100)return t[Math.floor(n/10)]+(n%10?" "+a[n%10]:"");
+  if(n<1000)return a[Math.floor(n/100)]+" Hundred"+(n%100?" "+toWords(n%100):"");
+  if(n<100000)return toWords(Math.floor(n/1000))+" Thousand"+(n%1000?" "+toWords(n%1000):"");
+  if(n<10000000)return toWords(Math.floor(n/100000))+" Lakh"+(n%100000?" "+toWords(n%100000):"");
+  return toWords(Math.floor(n/10000000))+" Crore"+(n%10000000?" "+toWords(n%10000000):"");
+}
+
 function buildInvoice(b,targetId){
   const dateStr=new Date(b.bill_date).toLocaleDateString("en-IN");
   const custName=b.customer&&b.customer!=="Walk-in"?b.customer:(b.walkin_name||"Walk-in");
-  const phone=b.phone||"";const total=parseFloat(b.total||0);
-  function w(n){const a=["","One","Two","Three","Four","Five","Six","Seven","Eight","Nine","Ten","Eleven","Twelve","Thirteen","Fourteen","Fifteen","Sixteen","Seventeen","Eighteen","Nineteen"];const t=["","","Twenty","Thirty","Forty","Fifty","Sixty","Seventy","Eighty","Ninety"];n=Math.round(n);if(n===0)return "Zero";if(n<20)return a[n];if(n<100)return t[Math.floor(n/10)]+(n%10?" "+a[n%10]:"");if(n<1000)return a[Math.floor(n/100)]+" Hundred"+(n%100?" "+w(n%100):"");if(n<100000)return w(Math.floor(n/1000))+" Thousand"+(n%1000?" "+w(n%1000):"");if(n<10000000)return w(Math.floor(n/100000))+" Lakh"+(n%100000?" "+w(n%100000):"");return w(Math.floor(n/10000000))+" Crore"+(n%10000000?" "+w(n%10000000):"");}
-  const amtWords=w(Math.round(total))+" Rupees Only";
+  const total=parseFloat(b.total||0);
+  const roundedAdd=parseFloat(b.rounded_off||0);
+  const netAmount=parseFloat(b.net_amount||total);
+  const amtWords=toWords(Math.round(netAmount))+" Only";
+  const billNo = b.bill_no || b.bill_id;
+  
   let rows="",totalQty=0;
-  b.items.forEach((item,i)=>{totalQty+=parseInt(item.quantity);rows+=`<tr><td style="text-align:center;padding:2px 4px;">${i+1}</td><td style="text-align:left;">${item.product||item.product_name||"-"}</td><td style="text-align:center;">${item.quantity}</td><td style="text-align:right;">${parseFloat(item.rate||item.selling_price||0).toFixed(2)}</td><td style="text-align:right;">${parseFloat(item.total_amount||0).toFixed(2)}</td></tr>`;});
-  for(let i=b.items.length;i<4;i++)rows+=`<tr><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>`;
+  const items = b.items || [];
+  
+  for(let i=0; i<20; i++){
+    if(i < items.length) {
+      const item = items[i];
+      const qtyVal = parseInt(item.quantity||0);
+      totalQty += qtyVal;
+      rows += `<tr style="height:18px;">
+        <td style="text-align:left;border:1px solid #000;padding:2px 6px;">${item.product||item.product_name||"-"}</td>
+        <td style="text-align:center;border:1px solid #000;padding:2px 6px;">${qtyVal} Nos</td>
+        <td style="text-align:right;border:1px solid #000;padding:2px 6px;">${parseFloat(item.rate||0).toFixed(2)}</td>
+        <td style="text-align:right;border:1px solid #000;padding:2px 6px;">${parseFloat(item.total_amount||0).toFixed(2)}</td>
+      </tr>`;
+    } else {
+      rows += `<tr style="height:18px;">
+        <td style="border:1px solid #000;">&nbsp;</td>
+        <td style="border:1px solid #000;"></td>
+        <td style="border:1px solid #000;"></td>
+        <td style="border:1px solid #000;"></td>
+      </tr>`;
+    }
+  }
+
   document.getElementById(targetId).innerHTML=`
-    <div class="ih"><h2>${SHOP}</h2><p>CELL: ${PHONE}</p><p style="font-weight:bold;margin-top:5px;font-size:15px;">Q BILL</p></div>
-    <div class="iline"></div>
-    <div class="imeta"><div><b>${custName}</b>${phone?"<br>"+phone:""}${b.address?"<br>"+b.address:""}</div>
-    <div style="text-align:right;"><b>Payment : ${b.payment_mode||"-"}</b><br><b>Date : ${dateStr}</b><br><b>Q No : ${b.bill_no}</b></div></div>
-    <div class="iline"></div>
-    <table class="itbl"><thead><tr><th style="width:40px;">S.No</th><th style="text-align:left;">Description</th><th style="width:60px;">Qty</th><th style="width:75px;text-align:right;">Rate</th><th style="width:85px;text-align:right;">Amount</th></tr></thead>
-    <tbody>${rows}</tbody>
-    <tfoot><tr><td colspan="2" style="font-weight:bold;text-align:left;">Total</td><td style="text-align:center;">${totalQty}</td><td></td><td style="text-align:right;font-weight:bold;">${total.toFixed(2)}</td></tr></tfoot></table>
-    <div class="ifooter"><div style="display:flex;justify-content:space-between;padding:3px 0;"><span>E. &amp; O.E.</span><span>${total.toFixed(2)}</span></div>
-    <div class="iline" style="border-color:#555;"></div>
-    <div style="display:flex;justify-content:space-between;padding:3px 0;"><span><i>${amtWords}</i></span><span><b>Net Amount : ${total.toFixed(2)}</b></span></div></div>
-    <div class="isign"><p>For ${SHOP}</p><br><p>Authorised Signatory</p></div>`;
+    <div style="font-family:'Arial',sans-serif;padding:20px;border:1px solid #000;background:#fff;width:100%;max-width:550px;margin:auto;">
+      <div style="text-align:right;font-size:11px;font-weight:bold;">CELL: ${PHONE}</div>
+      <div style="text-align:center;margin-bottom:12px;">
+        <div style="font-size:22px;font-weight:bold;letter-spacing:1px;">${SHOP}</div>
+        <div style="font-size:14px;font-weight:bold;margin-top:2px;">Q BILL</div>
+      </div>
+      
+      <table style="width:100%;border-collapse:collapse;border:1px solid #000;margin-bottom:-1px;">
+        <tr>
+          <td style="width:55%;border:1px solid #000;padding:6px;vertical-align:top;text-align:left;">
+            <b>To:</b> ${custName}
+          </td>
+          <td style="width:45%;border:1px solid #000;padding:6px;text-align:left;">
+            <div><b>Q Bill No :</b> Q-${billNo}</div>
+            <div><b>Payment Terms :</b> ${b.payment_mode||"Cash"}</div>
+            <div><b>Date :</b> ${dateStr}</div>
+          </td>
+        </tr>
+      </table>
+
+      <table style="width:100%;border-collapse:collapse;border:1px solid #000;">
+        <thead>
+          <tr style="background:#f9f9f9;">
+            <th style="border:1px solid #000;padding:5px;text-align:center;">Description</th>
+            <th style="border:1px solid #000;padding:5px;width:75px;text-align:center;">Qty</th>
+            <th style="border:1px solid #000;padding:5px;width:80px;text-align:center;">Rate</th>
+            <th style="border:1px solid #000;padding:5px;width:95px;text-align:center;">Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows}
+        </tbody>
+        <tfoot>
+          <tr>
+            <td style="border:1px solid #000;padding:4px;"></td>
+            <td style="border:1px solid #000;padding:4px;text-align:center;font-weight:bold;">${totalQty}.000</td>
+            <td style="border:1px solid #000;padding:4px;"></td>
+            <td style="border:1px solid #000;padding:4px;"></td>
+          </tr>
+          <tr>
+            <td colspan="3" style="border:1px solid #000;padding:4px;text-align:right;font-weight:bold;">Rounded Off (Add) :</td>
+            <td style="border:1px solid #000;padding:4px;text-align:right;">${roundedAdd.toFixed(2)}</td>
+          </tr>
+          <tr>
+            <td colspan="3" style="border:1px solid #000;padding:4px;text-align:right;font-weight:bold;font-size:14px;">Net Amount :</td>
+            <td style="border:1px solid #000;padding:4px;text-align:right;font-weight:bold;font-size:14px;">₹${netAmount.toFixed(2)}</td>
+          </tr>
+        </tfoot>
+      </table>
+
+      <table style="width:100%;border-collapse:collapse;border:1px solid #000;margin-top:-1px;">
+        <tr>
+          <td style="border:1px solid #000;padding:8px;font-weight:bold;font-size:12px;text-align:left;vertical-align:top;">
+            ${amtWords}
+          </td>
+          <td style="border:1px solid #000;padding:8px;text-align:right;width:180px;vertical-align:bottom;">
+            <div style="font-weight:bold;margin-bottom:30px;">For ${SHOP}</div>
+            <div style="font-size:11px;">Authorized Signatory</div>
+          </td>
+        </tr>
+      </table>
+    </div>`;
 }
 
 function printBill(){
   if(!currentBill){alert("No bill to print");return;}
-  window.print();
+  const b=currentBill;
+  const dateStr=new Date(b.bill_date).toLocaleDateString("en-IN");
+  const custName=b.customer&&b.customer!=="Walk-in"?b.customer:(b.walkin_name||"Walk-in");
+  const total=parseFloat(b.total||0);
+  const roundedAdd=parseFloat(b.rounded_off||0);
+  const netAmount=parseFloat(b.net_amount||total);
+  const amtWords=toWords(Math.round(netAmount))+" Only";
+  const billNo = b.bill_no || b.bill_id;
+  
+  let itemRows="",totalQty=0;
+  const items = b.items || [];
+
+  for(let i=0; i<20; i++){
+    if(i < items.length) {
+      const item = items[i];
+      const qtyVal = parseInt(item.quantity||0);
+      totalQty += qtyVal;
+      itemRows += `<tr>
+        <td style="text-align:left;">${item.product||item.product_name||"-"}</td>
+        <td style="text-align:center;">${qtyVal} Nos</td>
+        <td style="text-align:right;">${parseFloat(item.rate||item.selling_price||0).toFixed(2)}</td>
+        <td style="text-align:right;">${parseFloat(item.total_amount||0).toFixed(2)}</td>
+      </tr>`;
+    } else {
+      itemRows += `<tr><td style="height:16px;">&nbsp;</td><td></td><td></td><td></td></tr>`;
+    }
+  }
+
+  const html=`<!DOCTYPE html><html><head><title>Q Bill</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+@page{size:A5 portrait;margin:5mm;}
+body{font-family:Arial,sans-serif;font-size:9pt;line-height:1.15;padding:2mm;background:#fff;}
+.top-header{text-align:right;font-size:8.5pt;font-weight:bold;margin-bottom:2px;}
+.shop-title{text-align:center;font-size:16pt;font-weight:bold;letter-spacing:1px;}
+.bill-type{text-align:center;font-size:10pt;font-weight:bold;margin-bottom:4px;}
+
+table.main-tbl{width:100%;border-collapse:collapse;margin-top:0px;}
+table.main-tbl th, table.main-tbl td{border:1px solid #000;padding:2px 4px;}
+table.main-tbl th{font-size:8.5pt;font-weight:bold;text-align:center;}
+
+.meta-box{width:100%;border-collapse:collapse;margin-bottom:-1px;}
+.meta-box td{border:1px solid #000;padding:3px 5px;vertical-align:top;}
+
+.footer-tbl{width:100%;border-collapse:collapse;margin-top:-1px;}
+.footer-tbl td{border:1px solid #000;padding:4px 5px;}
+.sign-area{text-align:right;vertical-align:bottom;height:40px;}
+</style>
+</head>
+<body>
+  <div class="top-header">CELL: ${PHONE}</div>
+  <div class="shop-title">${SHOP}</div>
+  <div class="bill-type">Q BILL</div>
+
+  <table class="meta-box">
+    <tr>
+      <td style="width:55%;"><b>To :</b> ${custName}</td>
+      <td style="width:45%;">
+        <b>Q Bill No :</b> Q-${billNo}<br>
+        <b>Payment Terms :</b> ${b.payment_mode||"Cash"}<br>
+        <b>Date :</b> ${dateStr}
+      </td>
+    </tr>
+  </table>
+
+  <table class="main-tbl">
+    <thead>
+      <tr>
+        <th style="text-align:left;">Description</th>
+        <th style="width:55px;">Qty</th>
+        <th style="width:70px;text-align:right;">Rate</th>
+        <th style="width:80px;text-align:right;">Amount</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${itemRows}
+      <tr>
+        <td></td>
+        <td style="text-align:center;font-weight:bold;">${totalQty}.000</td>
+        <td></td>
+        <td></td>
+      </tr>
+      <tr>
+        <td colspan="3" style="text-align:right;font-weight:bold;">Rounded Off (Add) :</td>
+        <td style="text-align:right;">${roundedAdd.toFixed(2)}</td>
+      </tr>
+      <tr>
+        <td colspan="3" style="text-align:right;font-weight:bold;font-size:9.5pt;">Net Amount :</td>
+        <td style="text-align:right;font-weight:bold;font-size:9.5pt;">${netAmount.toFixed(2)}</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <table class="footer-tbl">
+    <tr>
+      <td style="font-weight:bold;font-size:8.5pt;vertical-align:top;">
+        ${amtWords}
+      </td>
+      <td class="sign-area" style="width:150px;">
+        <div style="font-weight:bold;">For ${SHOP}</div>
+        <div style="font-size:7.5pt;margin-top:20px;">Authorized Signatory</div>
+      </td>
+    </tr>
+  </table>
+</body></html>`;
+
+  const win=window.open("","_blank","width=600,height=800");
+  win.document.write(html);
+  win.document.close();
+  win.focus();
+  setTimeout(()=>{win.print();win.close();},500);
+}
+
+async function sharePDF(){
+  const btn=document.getElementById("sharePdfBtn");
+  const orig=btn.innerText;btn.innerText="⏳...";btn.disabled=true;
+  try{
+    const {jsPDF}=window.jspdf;
+    const canvas=await html2canvas(document.getElementById("invoiceArea"),{scale:2,backgroundColor:"#ffffff"});
+    const pdf=new jsPDF({orientation:"portrait",unit:"mm",format:"a5"});
+    const pw=pdf.internal.pageSize.getWidth()-10;
+    pdf.addImage(canvas.toDataURL("image/png"),"PNG",5,5,pw,(canvas.height*pw)/canvas.width);
+    const fname="Q-Bill-"+(currentBill?(currentBill.bill_no||currentBill.bill_id):"bill")+".pdf";
+    if(navigator.share){const blob=pdf.output("blob");const file=new File([blob],fname,{type:"application/pdf"});try{await navigator.share({files:[file],title:"Q Bill",text:"Q Bill from "+SHOP});btn.innerText=orig;btn.disabled=false;return;}catch(ex){}}
+    pdf.save(fname);
+  }catch(e){alert("PDF error: "+e.message);}
+  btn.innerText=orig;btn.disabled=false;
 }
 
 function newBill(){
