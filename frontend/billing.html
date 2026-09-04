@@ -49,24 +49,21 @@
     .cust-drop-item{padding:8px 12px;cursor:pointer;border-bottom:1px solid #f0f0f0;font-size:13px;}
     .cust-drop-item:hover,.cust-drop-item.dp-active{background:#e8f0ff;}
       
-      #invoiceArea{font-family:'Courier New',monospace;padding:4px;background:white;}
+    #invoiceArea{font-family:'Courier New',monospace;padding:10px;background:white;max-width:200mm;margin:auto;}
     .ih{text-align:center;margin-bottom:4px;}.ih h2{font-size:14pt;font-weight:bold;letter-spacing:1px;}.ih p{font-size:8pt;margin:1px 0;}
     .iline{border-top:1.5px solid #333;margin:3px 0;}
     .imeta{display:flex;justify-content:space-between;margin:4px 0;font-size:8pt;}
     .itbl{width:100%;border-collapse:collapse;margin:4px 0;font-size:8pt;}.itbl th,.itbl td{border:1px solid #333;padding:3px 5px;}.itbl th{text-align:center;font-weight:bold;}
     .ifooter{font-size:8pt;margin-top:3px;}.isign{text-align:right;margin-top:10px;font-size:8pt;}
     
-      /* Print styles - show ONLY invoice */
-    .print-only { display: none; }
-    
-      @media print {
-      @page { size: 148mm 105mm; margin: 3mm 4mm; }
-      body { margin: 0; padding: 0; }
+    /* Optimized Print rules for A5 (Half A4) */
+    @media print {
+      @page { size: 210mm 148mm; margin: 5mm; }
+      body { margin: 0; padding: 0; background: white; }
       body * { visibility: hidden; }
-      #invoiceArea { visibility: visible; position: fixed; top:0; left:0; width:140mm; font-size:8pt; line-height:1.3; }
-      #invoiceArea * { visibility: visible; }
-      #printArea { visibility: visible; position: fixed; top:0; left:0; width:140mm; font-size:8pt; line-height:1.3; }
-      #printArea * { visibility: visible; }
+      #invoiceArea, #invoiceArea * { visibility: visible; }
+      #invoiceArea { position: absolute; left: 0; top: 0; width: 100%; padding: 0; }
+      .no-print { display: none !important; }
     }
   </style>
 </head>
@@ -125,7 +122,6 @@
         <div class="f"><label>Name *</label><input id="walkinName" placeholder="Customer name" oninput="checkDup()"></div>
         <div class="f"><label>Phone</label><input id="walkinPhone" placeholder="Optional"></div>
       </div>
-      <!-- Duplicate warning -->
       <div class="dup-box" id="dupBox">
         <b style="color:#856404;">⚠️ Similar customer found:</b>
         <div id="dupList" style="margin:6px 0;font-size:13px;"></div>
@@ -134,7 +130,6 @@
           <button onclick="dismissDup()" style="font-size:12px;padding:5px 12px;background:#888;">Different Person</button>
         </div>
       </div>
-      <!-- Save as regular -->
       <div class="reg-box" id="regBox">
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:normal;font-size:13px;">
           <input type="checkbox" id="saveRegular" style="width:auto;">
@@ -250,6 +245,7 @@ function searchCustomers(){
     </div>`).join("");
   drop.style.display="block";
 }
+
 function custDropKey(e){
   const drop=document.getElementById("custDrop");const items=drop.querySelectorAll(".cust-drop-item");
   if(!items.length||drop.style.display==="none")return;
@@ -258,20 +254,22 @@ function custDropKey(e){
   if(e.key==="Enter"&&custIdx>=0){e.preventDefault();items[custIdx].dispatchEvent(new MouseEvent("mousedown",{bubbles:true}));return;}
   if(e.key==="Escape"){drop.style.display="none";custIdx=-1;}
 }
+
 function hlC(items){items.forEach((el,i)=>el.classList.toggle("dp-active",i===custIdx));if(items[custIdx])items[custIdx].scrollIntoView({block:"nearest"});}
+
 function pickCustomer(id,name,phone,due){
   document.getElementById("custId").value=id;document.getElementById("custSearch").value=name;
   document.getElementById("custSelected").innerText="✅ "+name+(phone?" | "+phone:"")+(due>0?" | Due:₹"+due.toFixed(2):"");
   document.getElementById("custDrop").style.display="none";document.getElementById("clearCustBtn").style.display="inline-block";
   document.getElementById("walkinBox").style.display="none";custIdx=-1;
 }
+
 function clearCustomer(){
   document.getElementById("custId").value="";document.getElementById("custSearch").value="";
   document.getElementById("custSelected").innerText="";document.getElementById("clearCustBtn").style.display="none";
   document.getElementById("walkinBox").style.display="block";
 }
 
-// Duplicate check
 let dupTimer=null;
 function checkDup(){
   const name=document.getElementById("walkinName").value.trim();
@@ -289,7 +287,6 @@ function checkDup(){
 function useExisting(){if(!dupMatches.length)return;const c=dupMatches[0];pickCustomer(c.customer_id,c.name,c.phone||"",parseFloat(c.balance)||0);document.getElementById("dupBox").style.display="none";}
 function dismissDup(){document.getElementById("dupBox").style.display="none";}
 
-// Product dropdown
 function showProdDrop(inputEl,rowId,fieldType,ctx){
   activeInput=inputEl;activeRow=rowId;dropIdx=-1;
   const q=inputEl.value.trim().toLowerCase();
@@ -307,6 +304,7 @@ function showProdDrop(inputEl,rowId,fieldType,ctx){
   drop.classList.add("open");
 }
 function hideProdDrop(){document.getElementById("prodDrop").classList.remove("open");dropIdx=-1;activeInput=null;}
+
 function handleProdKey(e,rowId,fieldType,ctx){
   const drop=document.getElementById("prodDrop");const isOpen=drop.classList.contains("open");const items=drop.querySelectorAll(".prod-drop-item");
   if(e.key==="ArrowDown"){e.preventDefault();if(!isOpen)showProdDrop(e.target,rowId,fieldType,ctx);dropIdx=Math.min(dropIdx+1,items.length-1);items.forEach((el,i)=>el.classList.toggle("dp-active",i===dropIdx));if(items[dropIdx])items[dropIdx].scrollIntoView({block:"nearest"});return;}
@@ -314,12 +312,14 @@ function handleProdKey(e,rowId,fieldType,ctx){
   if(e.key==="Enter"){if(isOpen&&dropIdx>=0&&items[dropIdx]){e.preventDefault();items[dropIdx].dispatchEvent(new MouseEvent("mousedown",{bubbles:true}));return;}if(isOpen&&items.length===1){e.preventDefault();items[0].dispatchEvent(new MouseEvent("mousedown",{bubbles:true}));return;}e.preventDefault();const qEl=document.getElementById((ctx==="alter"?"ar":"")+"qty_"+rowId);if(qEl)qEl.focus();return;}
   if(e.key==="Escape")hideProdDrop();if(e.key==="Tab")hideProdDrop();
 }
+
 function pickProduct(e,pid,name,code,ctx){
   e.preventDefault();const id=activeRow||0;
   if(ctx==="alter"){document.getElementById("arcode_"+id).value=code;document.getElementById("arname_"+id).value=name;document.getElementById("arpid_"+id).value=pid;document.getElementById("artag_"+id).innerText="✅ "+name;hideProdDrop();loadBatches("arbatch_"+id,pid);}
   else{document.getElementById("pcode_"+id).value=code;document.getElementById("pname_"+id).value=name;document.getElementById("ppid_"+id).value=pid;document.getElementById("ptag_"+id).innerText="✅ "+name;hideProdDrop();loadBatches("batch_"+id,pid);}
   setTimeout(()=>{const q=document.getElementById((ctx==="alter"?"ar":"")+"qty_"+id);if(q)q.focus();},50);
 }
+
 function loadBatches(selId,pid){
   const sel=document.getElementById(selId);if(!sel)return;
   sel.innerHTML=`<option value="">Loading...</option>`;
@@ -331,7 +331,6 @@ function loadBatches(selId,pid){
 }
 function esc(s){return (s||"").replace(/'/g,"\\'").replace(/"/g,'\\"');}
 
-// Bill rows
 function addRow(){
   rowCount++;const id=rowCount;
   const tr=document.createElement("tr");tr.id="billrow_"+id;
@@ -347,6 +346,7 @@ function addRow(){
   document.getElementById("billBody").appendChild(tr);
   document.getElementById("pcode_"+id).focus();
 }
+
 function onBC(id){const sel=document.getElementById("batch_"+id);const opt=sel.options[sel.selectedIndex];if(!opt||!opt.dataset.mrp)return;document.getElementById("rate_"+id).value=parseFloat(opt.dataset.mrp).toFixed(2);calcRow(id);}
 function calcRow(id){const q=parseFloat(document.getElementById("qty_"+id).value)||0;const r=parseFloat(document.getElementById("rate_"+id).value)||0;document.getElementById("amt_"+id).value=(q*r).toFixed(2);calcGT();}
 function delRow(id){const el=document.getElementById("billrow_"+id);if(el)el.remove();calcGT();}
@@ -385,7 +385,7 @@ async function submitBill(){
 
 function showInvoice(bill_id){
   fetch(API+"/bill/"+bill_id).then(r=>r.json()).then(b=>{
-    currentBill=b;buildInvoice(b,"invoiceArea");buildAlterRows(b);
+    currentBill=b;buildInvoice(b,"invoiceArea");
     document.getElementById("alterSection").style.display="none";
     document.getElementById("invoiceCard").style.display="block";
     const bnEl=document.getElementById("createdBillNo");
@@ -420,181 +420,12 @@ function buildInvoice(b,targetId){
 
 function printBill(){
   if(!currentBill){alert("No bill to print");return;}
-  const b=currentBill;
-  const dateStr=new Date(b.bill_date).toLocaleDateString("en-IN");
-  const custName=b.customer&&b.customer!=="Walk-in"?b.customer:(b.walkin_name||"Walk-in");
-  const phone=b.phone||"";
-  const total=parseFloat(b.total||0);
-  function toWords(n){
-    const a=["","One","Two","Three","Four","Five","Six","Seven","Eight","Nine","Ten","Eleven","Twelve","Thirteen","Fourteen","Fifteen","Sixteen","Seventeen","Eighteen","Nineteen"];
-    const t=["","","Twenty","Thirty","Forty","Fifty","Sixty","Seventy","Eighty","Ninety"];
-    n=Math.round(n);if(n===0)return"Zero";if(n<20)return a[n];if(n<100)return t[Math.floor(n/10)]+(n%10?" "+a[n%10]:"");
-    if(n<1000)return a[Math.floor(n/100)]+" Hundred"+(n%100?" "+toWords(n%100):"");
-    if(n<100000)return toWords(Math.floor(n/1000))+" Thousand"+(n%1000?" "+toWords(n%1000):"");
-    if(n<10000000)return toWords(Math.floor(n/100000))+" Lakh"+(n%100000?" "+toWords(n%100000):"");
-    return toWords(Math.floor(n/10000000))+" Crore"+(n%10000000?" "+toWords(n%10000000):"");
-  }
-  const amtWords=toWords(Math.round(total))+" Rupees Only";
-  let itemRows="",totalQty=0;
-  b.items.forEach((item,i)=>{
-    totalQty+=parseInt(item.quantity);
-    itemRows+=`<tr><td style="text-align:center;height:13px;">${i+1}</td><td>${item.product||item.product_name||"-"}</td><td style="text-align:center;">${item.quantity}</td><td style="text-align:right;">${parseFloat(item.rate||item.selling_price||0).toFixed(2)}</td><td style="text-align:right;">${parseFloat(item.total_amount||0).toFixed(2)}</td></tr>`;
-  });
-  for(let i=b.items.length;i<6;i++){
-    itemRows+=`<tr><td style="height:13px;">&nbsp;</td><td></td><td></td><td></td><td></td></tr>`;
-  }
-  const html=`<!DOCTYPE html><html><head><title></title>
-<style>
-*{box-sizing:border-box;margin:0;padding:0;}
-@page{size:148mm 105mm;margin:0;}
-html,body{width:148mm;height:105mm;overflow:hidden;
-  font-family:'Courier New',monospace;font-size:9pt;line-height:1.3;
-  padding:3mm 4mm;display:flex;flex-direction:column;}
-.header{text-align:center;margin-bottom:3px;}
-.shop-name{
-  font-size:20pt;
-  font-weight:900;
-  letter-spacing:3px;
-  text-transform:uppercase;
-  border-bottom:2px solid #000;
-  padding-bottom:2px;
-  margin-bottom:2px;
-  display:inline-block;
-  width:100%;
-}
-.shop-phone{font-size:9pt;margin:1px 0;}
-.bill-type{
-  font-size:11pt;
-  font-weight:bold;
-  letter-spacing:2px;
-  margin-top:2px;
-}
-hr{border:none;border-top:1px solid #000;margin:2px 0;}
-hr.tk{border-top:1.5px solid #000;}
-.meta{display:flex;justify-content:space-between;font-size:8.5pt;padding:2px 0;}
-.meta-right{text-align:right;}
-table{width:100%;border-collapse:collapse;flex:1;}
-th{border:0.7px solid #333;padding:2px 3px;font-size:8pt;font-weight:bold;text-align:center;background:#f0f0f0;}
-td{border:0.7px solid #333;padding:1px 3px;font-size:8.5pt;}
-.tfoot td{font-weight:bold;}
-.footer{margin-top:2px;}
-.frow{display:flex;justify-content:space-between;font-size:8.5pt;}
-.words{font-style:italic;font-size:7.5pt;flex:1;}
-.netamt{font-weight:bold;font-size:9.5pt;}
-.sign{text-align:right;font-size:8.5pt;margin-top:3px;font-weight:bold;}
-</style>
-</head>
-<body>
-  <div class="header">
-    <div class="shop-name">SUN CERAMIC</div>
-    <div class="shop-phone">CELL: 9942607766</div>
-    <div class="bill-type">Q BILL</div>
-  </div>
-  <hr class="tk">
-  <div class="meta">
-    <div><b>${custName}</b>${phone?"<br>"+phone:""}</div>
-    <div class="meta-right">
-      <b>Payment : ${b.payment_mode||"-"}</b><br>
-      <b>Date : ${dateStr}</b><br>
-      <b>Q No : ${b.bill_no}</b>
-    </div>
-  </div>
-  <hr class="tk">
-  <table>
-    <thead><tr>
-      <th style="width:28px;">S.No</th>
-      <th style="text-align:left;">Description</th>
-      <th style="width:36px;">Qty</th>
-      <th style="width:65px;text-align:right;">Rate</th>
-      <th style="width:72px;text-align:right;">Amount</th>
-    </tr></thead>
-    <tbody>${itemRows}</tbody>
-    <tfoot><tr class="tfoot">
-      <td colspan="2">Total</td>
-      <td style="text-align:center;">${totalQty}</td>
-      <td></td>
-      <td style="text-align:right;">${total.toFixed(2)}</td>
-    </tr></tfoot>
-  </table>
-  <div class="footer">
-    <hr>
-    <div class="frow"><span>E. &amp; O.E.</span><span>${total.toFixed(2)}</span></div>
-    <hr>
-    <div class="frow">
-      <span class="words">${amtWords}</span>
-      <span class="netamt">Net Amount : ${total.toFixed(2)}</span>
-    </div>
-    <div class="sign">For SUN CERAMIC</div>
-  </div>
-</body></html>`;
-  const win=window.open("","_blank","width=700,height=520");
-  win.document.write(html);
-  win.document.close();
-  win.focus();
-  setTimeout(()=>{win.print();win.close();},500);
-}
-async function sharePDF(){
-  const btn=document.getElementById("sharePdfBtn");const orig=btn.innerText;btn.innerText="⏳...";btn.disabled=true;
-  try{const {jsPDF}=window.jspdf;const canvas=await html2canvas(document.getElementById("invoiceArea"),{scale:2,backgroundColor:"#ffffff"});
-  const pdf=new jsPDF({orientation:"portrait",unit:"mm",format:"a4"});const pw=pdf.internal.pageSize.getWidth()-20;
-  pdf.addImage(canvas.toDataURL("image/png"),"PNG",10,10,pw,(canvas.height*pw)/canvas.width);
-  const fname="Q-Bill-"+(currentBill?currentBill.bill_no:"bill")+".pdf";
-  if(navigator.share){const blob=pdf.output("blob");const file=new File([blob],fname,{type:"application/pdf"});try{await navigator.share({files:[file],title:"Q Bill",text:"Bill from "+SHOP});btn.innerText=orig;btn.disabled=false;return;}catch(ex){}}
-  pdf.save(fname);}catch(e){alert("PDF error: "+e.message);}
-  btn.innerText=orig;btn.disabled=false;
-}
-
-// Alter Bill
-function buildAlterRows(b){document.getElementById("alterBody").innerHTML="";alterRowCount=0;deletedAlterIds=[];b.items.forEach(item=>addAR(item));}
-function addAR(item){
-  alterRowCount++;const id=alterRowCount;
-  const tr=document.createElement("tr");tr.id="arow_"+id;
-  tr.innerHTML=`<td>${id}</td>
-    <td><input id="arcode_${id}" value="${esc(item.product_code||"")}" placeholder="Code" oninput="showProdDrop(this,${id},'code','alter')" onfocus="showProdDrop(this,${id},'code','alter')" onkeydown="handleProdKey(event,${id},'code','alter')" autocomplete="off"></td>
-    <td><input id="arname_${id}" value="${esc(item.product||item.product_name||"")}" placeholder="Name" oninput="showProdDrop(this,${id},'name','alter')" onfocus="showProdDrop(this,${id},'name','alter')" onkeydown="handleProdKey(event,${id},'name','alter')" autocomplete="off">
-    <div class="selected-tag" id="artag_${id}">${(item.product||item.product_name)?"✅ "+(item.product||item.product_name):""}</div>
-    <input type="hidden" id="arpid_${id}" value="${item.product_id||""}"><input type="hidden" id="ariid_${id}" value="${item.item_id||"new"}"></td>
-    <td><select id="arbatch_${id}" onchange="onAB(${id})" onkeydown="if(event.key==='Enter'){event.preventDefault();document.getElementById('arqty_'+${id}).focus();}"><option value="${item.batch_id||""}">${item.batch_id?"Current batch":"No batch"}</option></select></td>
-    <td><input type="number" id="arqty_${id}" value="${item.quantity}" min="1" oninput="calcAR(${id})" onkeydown="if(event.key==='Enter'){event.preventDefault();document.getElementById('arrate_'+${id}).focus();}"></td>
-    <td><input type="number" id="arrate_${id}" value="${parseFloat(item.rate||item.selling_price||0).toFixed(2)}" oninput="calcAR(${id})" onkeydown="if(event.key==='Enter'){event.preventDefault();document.getElementById('aramt_'+${id}).focus();}"></td>
-    <td><input type="number" id="aramt_${id}" value="${parseFloat(item.total_amount||0).toFixed(2)}" oninput="calcAT()"></td>
-    <td><button class="danger" onclick="delAR(${id},'${item.item_id||'new'}')" style="padding:3px 7px;font-size:11px;">✕</button></td>`;
-  document.getElementById("alterBody").appendChild(tr);
-  if(item.product_id)loadBatches("arbatch_"+id,item.product_id);
-  calcAT();
-}
-function addAlterRow(){addAR({product_id:"",product:"",product_code:"",batch_id:"",quantity:1,rate:0,total_amount:0,item_id:"new"});}
-function onAB(id){const sel=document.getElementById("arbatch_"+id);const opt=sel.options[sel.selectedIndex];if(!opt||!opt.dataset.mrp)return;document.getElementById("arrate_"+id).value=parseFloat(opt.dataset.mrp).toFixed(2);calcAR(id);}
-function calcAR(id){const q=parseFloat(document.getElementById("arqty_"+id).value)||0;const r=parseFloat(document.getElementById("arrate_"+id).value)||0;document.getElementById("aramt_"+id).value=(q*r).toFixed(2);calcAT();}
-function delAR(id,iid){if(iid&&iid!=="new")deletedAlterIds.push(iid);const el=document.getElementById("arow_"+id);if(el)el.remove();calcAT();}
-function calcAT(){let t=0;for(let i=1;i<=alterRowCount;i++){const el=document.getElementById("aramt_"+i);if(el)t+=parseFloat(el.value)||0;}document.getElementById("alterTotal").innerText="New Total: ₹"+t.toFixed(2);}
-function showAlterSection(){document.getElementById("alterSection").style.display="block";document.getElementById("alterSection").scrollIntoView({behavior:"smooth"});}
-function hideAlterSection(){document.getElementById("alterSection").style.display="none";}
-function saveAlter(){
-  const items=[];
-  for(let i=1;i<=alterRowCount;i++){const row=document.getElementById("arow_"+i);if(!row)continue;const iid=document.getElementById("ariid_"+i).value;const pid=document.getElementById("arpid_"+i).value;const bid=document.getElementById("arbatch_"+i).value;const qty=parseInt(document.getElementById("arqty_"+i).value)||0;const rate=parseFloat(document.getElementById("arrate_"+i).value)||0;const amt=parseFloat(document.getElementById("aramt_"+i).value)||0;if(qty<=0||rate<=0)continue;const itemId=(iid&&iid!=="new"&&!isNaN(parseInt(iid)))?parseInt(iid):"new";items.push({item_id:itemId,product_id:pid||null,batch_id:bid||null,quantity:qty,rate,total_amount:amt});}
-  if(!items.length){alert("Add at least one item");return;}
-  fetch(API+"/alter-bill/"+currentBill.bill_no,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({items,deleted_item_ids:deletedAlterIds})})
-  .then(r=>r.json()).then(d=>{if(d.error){alert("Error: "+d.error);return;}alert("✅ Bill updated! New total: ₹"+d.new_total.toFixed(2));deletedAlterIds=[];showInvoice(currentBill.bill_no);});
+  window.print();
 }
 
 function newBill(){
-  document.getElementById("billBody").innerHTML="";document.getElementById("invoiceCard").style.display="none";
-  clearCustomer();document.getElementById("paymentType").value="Cash";document.getElementById("walkinBox").style.display="block";
-  document.getElementById("walkinName").value="";document.getElementById("walkinPhone").value="";
-  document.getElementById("saveRegular").checked=false;document.getElementById("saveRegular").disabled=false;
-  document.getElementById("dupBox").style.display="none";document.getElementById("grandTotal").innerText="Grand Total: ₹0.00";
-  rowCount=0;currentBill=null;addRow();loadRegular();window.scrollTo({top:0,behavior:"smooth"});
+  location.reload();
 }
-
-document.addEventListener("keydown",e=>{
-  if(e.ctrlKey&&e.key==="F10"){e.preventDefault();return;}
-  if(e.key==="Escape"){window.location.href="index.html";return;}
-  const tag=document.activeElement?document.activeElement.tagName:"";
-  if(tag==="INPUT"||tag==="TEXTAREA"||tag==="SELECT")return;
-  const p={"0":"index.html","1":"billing.html","2":"quotation.html","3":"purchase-bill.html","4":"products.html","5":"customers.html","6":"suppliers.html","7":"expenses.html","8":"reports.html","9":"retrieve-bill.html"};
-  if(p[e.key]){e.preventDefault();window.location.href=p[e.key];}
-});
 </script>
 </body>
 </html>

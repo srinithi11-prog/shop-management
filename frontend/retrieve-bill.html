@@ -256,7 +256,6 @@ function clearSearch(){
 
 // View Bill
 function viewBill(bill_id){
-  // Add cache buster to always get fresh data from server
   fetch(API+"/bill/"+bill_id+"?t="+Date.now()).then(r=>r.json()).then(b=>{
     currentBill=b;
     currentBill.bill_id = bill_id;
@@ -490,7 +489,6 @@ function loadAlterBatches(rowId,pid,curBatch){
 
 // Alter rows
 function buildAlterRows(b){
-  // Fully reset alter section
   document.getElementById("alterBody").innerHTML="";
   alterRowCount=0;
   deletedItemIds=[];
@@ -560,25 +558,37 @@ function saveAlter(){
   .then(r=>r.json()).then(d=>{
     if(d.error){alert("Error: "+d.error);return;}
     alert("✅ Bill updated! New total: ₹"+d.new_total.toFixed(2));
-    deletedItemIds=[];viewBill(currentBill.bill_id||currentBill.bill_no);hideAlterSection();
+    deletedItemIds=[];
+    viewBill(currentBill.bill_id);
+    loadOutstanding();
+  }).catch(err => {
+    alert("Network error: " + err.message);
   });
 }
-function doCancelBill(){
-  if(!confirm("Cancel this bill?\n• Stock restored\n• Credit balance reversed\n\nCannot be undone."))return;
-  fetch(API+"/cancel-bill/"+currentBill.bill_no,{method:"POST"}).then(r=>r.json()).then(d=>{
-    if(d.error){alert("Error: "+d.error);return;}
-    alert("✅ Bill cancelled!");viewBill(currentBill.bill_id||currentBill.bill_no);loadOutstanding();
-  });
-}
-function esc(s){return (s||"").replace(/'/g,"\\'").replace(/"/g,'\\"');}
 
-document.addEventListener("keydown",e=>{
-  if(e.key==="Escape"){window.location.href="index.html";return;}
-  const tag=document.activeElement?document.activeElement.tagName:"";
-  if(tag==="INPUT"||tag==="TEXTAREA"||tag==="SELECT")return;
-  const p={"0":"index.html","1":"billing.html","2":"quotation.html","3":"purchase-bill.html","4":"products.html","5":"customers.html","6":"suppliers.html","7":"expenses.html","8":"reports.html","9":"retrieve-bill.html"};
-  if(p[e.key]){e.preventDefault();window.location.href=p[e.key];}
-});
+// Cancel Bill
+function doCancelBill() {
+  if (!currentBill) return;
+  if (!confirm("Are you sure you want to cancel Q-" + currentBill.bill_no + "? This will restore inventory stock.")) return;
+
+  fetch(API + "/cancel-bill/" + currentBill.bill_no, { method: "DELETE" })
+    .then(r => r.json())
+    .then(d => {
+      if (d.error) {
+        alert("Error: " + d.error);
+        return;
+      }
+      alert("✅ Bill cancelled successfully!");
+      viewBill(currentBill.bill_id);
+      loadOutstanding();
+    })
+    .catch(err => alert("Network error: " + err.message));
+}
+
+function esc(str) {
+  if (!str) return "";
+  return String(str).replace(/"/g, "&quot;").replace(/'/g, "\\'");
+}
 </script>
 </body>
 </html>
