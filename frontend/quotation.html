@@ -34,7 +34,6 @@
     .grand-total{text-align:right;font-size:16px;font-weight:bold;color:#6f42c1;margin-top:10px;}
     .walkin-box{background:#fff8e1;border:1px solid #ffc107;border-radius:7px;padding:10px;margin-top:8px;}
     .selected-tag{font-size:11px;color:#28a745;font-weight:bold;margin-top:2px;}
-
     /* Product dropdown */
     .prod-drop{position:fixed;background:white;border:1px solid #aaa;border-radius:6px;max-height:200px;overflow-y:auto;z-index:99999;box-shadow:0 6px 20px rgba(0,0,0,0.2);display:none;min-width:240px;}
     .prod-drop.open{display:block;}
@@ -43,51 +42,34 @@
     .pdi-code{font-size:11px;color:#6f42c1;font-weight:bold;font-family:monospace;}
     .pdi-name{font-size:13px;color:#222;}
     .pdi-brand{font-size:11px;color:#888;}
-
     /* Customer dropdown */
     .cust-drop{position:absolute;top:100%;left:0;width:100%;background:white;border:1px solid #aaa;border-radius:6px;max-height:180px;overflow-y:auto;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,0.15);display:none;}
     .cust-drop-item{padding:8px 11px;cursor:pointer;border-bottom:1px solid #f0f0f0;font-size:13px;}
     .cust-drop-item:hover,.cust-drop-item.dp-active{background:#f3eeff;}
-
     table.hist-tbl{width:100%;border-collapse:collapse;}
     table.hist-tbl th{background:#6f42c1;color:white;padding:8px;font-size:13px;}
     table.hist-tbl td{padding:8px;border:1px solid #eee;font-size:13px;text-align:center;}
     .badge-open{background:#e8f4fd;color:#007bff;padding:2px 8px;border-radius:10px;font-size:12px;font-weight:bold;}
     .badge-conv{background:#e8f7ef;color:#28a745;padding:2px 8px;border-radius:10px;font-size:12px;font-weight:bold;}
-
     .modal-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:1000;justify-content:center;align-items:flex-start;overflow-y:auto;padding:20px 10px;}
     .modal-overlay.show{display:flex;}
     .modal{background:white;padding:22px;border-radius:10px;width:740px;max-width:98%;margin:auto;}
     .modal h3{color:#6f42c1;margin-bottom:14px;}
-
     
-
-    #printArea{font-family:'Courier New',monospace;padding:20px;background:white;}
-    .ih{text-align:center;margin-bottom:8px;}
-    .ih h2{font-size:22px;font-weight:bold;letter-spacing:2px;}
-    .ih p{font-size:13px;margin:2px 0;}
-    .itbl{width:100%;border-collapse:collapse;margin:8px 0;font-size:13px;}
-    .itbl th,.itbl td{border:1px solid #333;padding:5px 7px;}
-    .itbl th{text-align:center;font-weight:bold;}
-    .ifooter{font-size:13px;margin-top:5px;}
-    .isign{text-align:right;margin-top:22px;font-size:13px;}
-      
-      #invoiceArea{font-family:'Courier New',monospace;padding:4px;background:white;}
+    #printArea{font-family:'Courier New',monospace;padding:4px;background:white;}
     .ih{text-align:center;margin-bottom:4px;}.ih h2{font-size:14pt;font-weight:bold;letter-spacing:1px;}.ih p{font-size:8pt;margin:1px 0;}
     .iline{border-top:1.5px solid #333;margin:3px 0;}
     .imeta{display:flex;justify-content:space-between;margin:4px 0;font-size:8pt;}
     .itbl{width:100%;border-collapse:collapse;margin:4px 0;font-size:8pt;}.itbl th,.itbl td{border:1px solid #333;padding:3px 5px;}.itbl th{text-align:center;font-weight:bold;}
     .ifooter{font-size:8pt;margin-top:3px;}.isign{text-align:right;margin-top:10px;font-size:8pt;}
     
-      /* Print styles - show ONLY invoice */
+    /* Print styles */
     .print-only { display: none; }
     
-      @media print {
+    @media print {
       @page { size: 148mm 105mm; margin: 3mm 4mm; }
       body { margin: 0; padding: 0; }
       body * { visibility: hidden; }
-      #invoiceArea { visibility: visible; position: fixed; top:0; left:0; width:140mm; font-size:8pt; line-height:1.3; }
-      #invoiceArea * { visibility: visible; }
       #printArea { visibility: visible; position: fixed; top:0; left:0; width:140mm; font-size:8pt; line-height:1.3; }
       #printArea * { visibility: visible; }
     }
@@ -107,7 +89,6 @@
   <a href="reports.html">📊 Reports<span class="key-hint">8</span></a>
   <a href="retrieve-bill.html">🔍 Find Bill<span class="key-hint">9</span></a>
 </div>
-
 <div class="container">
   <!-- Create Quotation -->
   <div class="card">
@@ -134,7 +115,6 @@
         <div class="f"><label>Phone</label><input id="walkinPhone" placeholder="Optional"></div>
       </div>
     </div>
-
     <div style="overflow-x:auto;margin-top:12px;">
       <table class="qtbl">
         <thead><tr>
@@ -157,7 +137,6 @@
     </div>
     <div class="grand-total" id="grandTotal">Net Total: ₹0.00</div>
   </div>
-
   <!-- Quotation History -->
   <div class="card">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
@@ -177,14 +156,12 @@
     </div>
   </div>
 </div>
-
 <!-- Detail Modal -->
 <div class="modal-overlay" id="detailModal">
   <div class="modal">
     <h3 id="modalTitle">Quotation Details</h3>
     <div id="modalContent"></div>
     <div id="printArea" style="display:none;"></div>
-
     <div class="no-print" style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;justify-content:space-between;">
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <button class="warn" onclick="printQuot()">🖨️ Print</button>
@@ -194,7 +171,6 @@
       </div>
       <button class="danger" onclick="closeModal()">Close</button>
     </div>
-
     <!-- Alter Section -->
     <div id="alterSection" style="display:none;margin-top:16px;border-top:2px solid #eee;padding-top:14px;">
       <h4 style="color:#6f42c1;margin-bottom:10px;">✏️ Alter Quotation</h4>
@@ -211,7 +187,6 @@
       </div>
       <div class="grand-total" id="alterTotal" style="color:#6f42c1;">Net Total: ₹0.00</div>
     </div>
-
     <!-- Convert Section -->
     <div id="convertSection" style="display:none;margin-top:16px;border-top:2px solid #eee;padding-top:14px;">
       <h4 style="color:#28a745;margin-bottom:10px;">🔄 Convert to Sales Bill</h4>
@@ -236,15 +211,12 @@
     </div>
   </div>
 </div>
-
 <div class="prod-drop" id="prodDrop"></div>
-
 <script>
 const API = "http://localhost:3000";
 const SHOP = "SUN CERAMIC";
 const PHONE = "9942607766";
 if(!sessionStorage.getItem("loggedIn")) window.location.href = "login.html";
-
 let rowCount=0, alterRowCount=0;
 let allProducts=[], allCustomers=[];
 let activeInput=null, activeRowId=null, activeContext="create";
@@ -331,7 +303,6 @@ function showDrop(inputEl, rowId, fieldType, context){
   drop.classList.add("open");
 }
 function hideDrop(){document.getElementById("prodDrop").classList.remove("open");dropIdx=-1;activeInput=null;}
-
 function handleDropKey(e, rowId, fieldType, context){
   const drop=document.getElementById("prodDrop");
   const isOpen=drop.classList.contains("open");
@@ -349,7 +320,6 @@ function handleDropKey(e, rowId, fieldType, context){
   if(e.key==="Escape"){hideDrop();}
   if(e.key==="Tab"){hideDrop();}
 }
-
 function pickProduct(e, pid, name, code){
   e.preventDefault();
   const id=activeRowId; const ctx=activeContext;
@@ -362,7 +332,6 @@ function pickProduct(e, pid, name, code){
   loadBatches(pre+"batch_"+id, pid);
   setTimeout(()=>{const q=document.getElementById(pre+"qty_"+id);if(q)q.focus();},50);
 }
-
 function loadBatches(selId, pid){
   const sel=document.getElementById(selId);
   if(!sel) return;
@@ -416,7 +385,6 @@ function addRow(){
   document.getElementById("quotBody").appendChild(tr);
   document.getElementById("rcode_"+id).focus();
 }
-
 function onBatchPick(id, pre){
   const sel=document.getElementById(pre+"batch_"+id);
   const opt=sel.options[sel.selectedIndex];
@@ -424,7 +392,6 @@ function onBatchPick(id, pre){
   document.getElementById(pre+"rate_"+id).value=parseFloat(opt.dataset.mrp).toFixed(2);
   calcRow(id, pre);
 }
-
 function calcRow(id, pre){
   const qty=parseFloat(document.getElementById(pre+"qty_"+id).value)||0;
   const rate=parseFloat(document.getElementById(pre+"rate_"+id).value)||0;
@@ -433,15 +400,12 @@ function calcRow(id, pre){
   document.getElementById(pre+"amt_"+id).value=net.toFixed(2);
   if(pre==="ar") calcAlterTotal(); else calcTotal();
 }
-
 function delRow(rowId){const el=document.getElementById(rowId);if(el)el.remove();calcTotal();}
-
 function calcTotal(){
   let t=0;
   for(let i=1;i<=rowCount;i++){const a=document.getElementById("ramt_"+i);if(a)t+=parseFloat(a.value)||0;}
   document.getElementById("grandTotal").innerText="Net Total: ₹"+t.toFixed(2);
 }
-
 function saveQuotation(){
   const quot_date=document.getElementById("quotDate").value;
   const customer_id=document.getElementById("custId").value;
@@ -568,14 +532,13 @@ function buildPrintArea(q){
       <td style="text-align:center;">${item.quantity}</td>
       <td style="text-align:right;">${parseFloat(item.rate).toFixed(2)}</td>
       <td style="text-align:center;">${disc.toFixed(0)}%</td>
-      <td style="text-align:right;color:#c0392b;">${discAmt.toFixed(2)}</td>
+      <td style="text-align:right;">${discAmt.toFixed(2)}</td>
       <td style="text-align:right;">${parseFloat(item.total_amount).toFixed(2)}</td>
     </tr>`;
   });
-  for(let i=q.items.length;i<4;i++) rows+=`<tr><td>&nbsp;</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>`;
-
+  for(let i=q.items.length;i<4;i++) rows+=`<tr><td style="height:14px;">&nbsp;</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>`;
   document.getElementById("printArea").innerHTML=`
-    <div class="ih"><h2>${SHOP}</h2><p>CELL: ${PHONE}</p><p style="font-weight:bold;margin-top:5px;font-size:15px;">QUOTATION</p></div>
+    <div class="ih"><h2>${SHOP}</h2><p>CELL: ${PHONE}</p><p style="font-weight:bold;margin-top:3px;font-size:10pt;">QUOTATION</p></div>
     <div class="iline"></div>
     <div class="imeta">
       <div><b>${custName}</b>${phone?"<br>"+phone:""}</div>
@@ -584,66 +547,71 @@ function buildPrintArea(q){
     <div class="iline"></div>
     <table class="itbl">
       <thead><tr>
-        <th style="width:36px;">S.No</th>
+        <th style="width:30px;">S.No</th>
         <th style="text-align:left;">Description</th>
-        <th style="width:50px;">Qty</th>
-        <th style="width:68px;text-align:right;">Rate</th>
-        <th style="width:48px;">Disc%</th>
-        <th style="width:70px;text-align:right;">Disc ₹</th>
-        <th style="width:78px;text-align:right;">Amount</th>
+        <th style="width:35px;">Qty</th>
+        <th style="width:60px;text-align:right;">Rate</th>
+        <th style="width:40px;">Disc%</th>
+        <th style="width:55px;text-align:right;">Disc ₹</th>
+        <th style="width:65px;text-align:right;">Amount</th>
       </tr></thead>
       <tbody>${rows}</tbody>
       <tfoot>
         <tr>
           <td colspan="2" style="font-weight:bold;text-align:left;">Total</td>
-          <td style="text-align:center;">${totalQty}</td>
+          <td style="text-align:center;font-weight:bold;">${totalQty}</td>
           <td></td>
           <td></td>
-          <td style="text-align:right;color:#c0392b;">-${discTotal.toFixed(2)}</td>
+          <td style="text-align:right;font-weight:bold;">${discTotal.toFixed(2)}</td>
           <td style="text-align:right;font-weight:bold;">${total.toFixed(2)}</td>
         </tr>
       </tfoot>
     </table>
     <div class="ifooter">
-      <div style="display:flex;justify-content:space-between;padding:3px 0;"><span>E. &amp; O.E.</span><span>${total.toFixed(2)}</span></div>
+      <div style="display:flex;justify-content:space-between;padding:2px 0;"><span>E. &amp; O.E.</span><span>${total.toFixed(2)}</span></div>
       <div class="iline" style="border-color:#555;"></div>
-      <div style="display:flex;justify-content:space-between;padding:3px 0;"><span><i>${amtWords}</i></span><span><b>Net Amount : ${total.toFixed(2)}</b></span></div>
+      <div style="display:flex;justify-content:space-between;padding:2px 0;"><span><i>${amtWords}</i></span><span><b>Net Amount : ${total.toFixed(2)}</b></span></div>
     </div>
-    <div class="isign"><p>For ${SHOP}</p><br><br><p>Authorised Signatory</p></div>`;
+    <div class="isign"><p>For ${SHOP}</p><br><p>Authorised Signatory</p></div>`;
   document.getElementById("printArea").style.display="none";
 }
 
 function printQuot(){
-  if(!currentQuot){ alert("No quotation"); return; }
+  if (!currentQuot) { alert("No quotation selected"); return; }
+  
   const q = currentQuot;
   const dateStr = new Date(q.quot_date).toLocaleDateString("en-IN");
   const custName = q.display_name || "Walk-in";
   const phone = q.display_phone || "";
-  const total = parseFloat(q.net_amount||0);
-  const discTotal = parseFloat(q.discount_total||0);
+  const total = parseFloat(q.net_amount || 0);
+  const discTotal = parseFloat(q.discount_total || 0);
 
-  function toWords(n){
-    const a=["","One","Two","Three","Four","Five","Six","Seven","Eight","Nine","Ten","Eleven","Twelve","Thirteen","Fourteen","Fifteen","Sixteen","Seventeen","Eighteen","Nineteen"];
-    const t=["","","Twenty","Thirty","Forty","Fifty","Sixty","Seventy","Eighty","Ninety"];
-    n=Math.round(n);
-    if(n===0)return "Zero";if(n<20)return a[n];if(n<100)return t[Math.floor(n/10)]+(n%10?" "+a[n%10]:"");
-    if(n<1000)return a[Math.floor(n/100)]+" Hundred"+(n%100?" "+toWords(n%100):"");
-    if(n<100000)return toWords(Math.floor(n/1000))+" Thousand"+(n%1000?" "+toWords(n%1000):"");
-    if(n<10000000)return toWords(Math.floor(n/100000))+" Lakh"+(n%100000?" "+toWords(n%100000):"");
-    return toWords(Math.floor(n/10000000))+" Crore"+(n%10000000?" "+toWords(n%10000000):"");
+  function toWords(n) {
+    const a = ["", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen", "Seventeen", "Eighteen", "Nineteen"];
+    const t = ["", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"];
+    n = Math.round(n);
+    if (n === 0) return "Zero";
+    if (n < 20) return a[n];
+    if (n < 100) return t[Math.floor(n / 10)] + (n % 10 ? " " + a[n % 10] : "");
+    if (n < 1000) return a[Math.floor(n / 100)] + " Hundred" + (n % 100 ? " " + toWords(n % 100) : "");
+    if (n < 100000) return toWords(Math.floor(n / 1000)) + " Thousand" + (n % 1000 ? " " + toWords(n % 1000) : "");
+    if (n < 10000000) return toWords(Math.floor(n / 100000)) + " Lakh" + (n % 100000 ? " " + toWords(n % 100000) : "");
+    return toWords(Math.floor(n / 10000000)) + " Crore" + (n % 10000000 ? " " + toWords(n % 10000000) : "");
   }
-  const amtWords = toWords(Math.round(total)) + " Rupees Only";
 
+  const amtWords = toWords(Math.round(total)) + " Rupees Only";
   let itemRows = "";
   let totalQty = 0;
-  q.items.forEach((item,i) => {
+
+  q.items.forEach((item, i) => {
     totalQty += parseInt(item.quantity);
-    const gross = parseFloat(item.rate)*parseInt(item.quantity);
-    const disc = parseFloat(item.discount_pct||0);
-    const discAmt = gross*disc/100;
+    const gross = parseFloat(item.rate) * parseInt(item.quantity);
+    const disc = parseFloat(item.discount_pct || 0);
+    const discAmt = gross * disc / 100;
+    
     itemRows += `<tr>
-      <td style="text-align:center;">${i+1}</td>
-      <td>${item.product_name||"-"}</td>
+      <td style="text-align:center;">${i + 1}</td>
+      <td style="text-align:left;">${item.product_name || "-"}</td>
       <td style="text-align:center;">${item.quantity}</td>
       <td style="text-align:right;">${parseFloat(item.rate).toFixed(2)}</td>
       <td style="text-align:center;">${disc.toFixed(0)}%</td>
@@ -651,85 +619,90 @@ function printQuot(){
       <td style="text-align:right;">${parseFloat(item.total_amount).toFixed(2)}</td>
     </tr>`;
   });
-  for(let i = q.items.length; i < 7; i++){
-    itemRows += `<tr><td style="height:16px;">&nbsp;</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>`;
+
+  for (let i = q.items.length; i < 4; i++) {
+    itemRows += `<tr><td style="height:14px;">&nbsp;</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>`;
   }
 
-  const html = `<!DOCTYPE html><html><head><title></title><style>
-* { box-sizing: border-box; margin: 0; padding: 0; }
-@page { size: A5 portrait; margin: 6mm 8mm; }
-html { height: 100%; }
-body {
-  width: 100%;
-  height: 100%;
-  font-family: 'Courier New', monospace;
-  font-size: 10pt;
-  line-height: 1.4;
-}
-.shop-header { text-align: center; margin-bottom: 5px; }
-.shop-header h2 { font-size: 16pt; font-weight: bold; letter-spacing: 2px; }
-.shop-header p { font-size: 9pt; margin: 1px 0; }
-.shop-header .bill-type { font-size: 12pt; font-weight: bold; margin-top: 3px; }
-hr { border: none; border-top: 1.5px solid #000; margin: 4px 0; }
-hr.thin { border-top: 0.8px solid #000; }
-.meta-row { display: flex; justify-content: space-between; font-size: 9.5pt; margin: 4px 0; }
-.meta-left { text-align: left; }
-.meta-right { text-align: right; }
-table { width: 100%; border-collapse: collapse; margin: 5px 0; }
-table th { border: 0.8px solid #333; padding: 4px 5px; font-size: 9pt; font-weight: bold; text-align: center; }
-table td { border: 0.8px solid #333; padding: 3px 5px; font-size: 9pt; }
-.footer-row { display: flex; justify-content: space-between; font-size: 9pt; margin-top: 3px; }
-.amount-words { font-style: italic; font-size: 8.5pt; }
-.net-amount { font-weight: bold; font-size: 10pt; text-align: right; }
-.sign-row { text-align: right; font-size: 9pt; margin-top: 8px; }
-  </style></head><body>
-    <div class="shop-header">
-      <h2>SUN CERAMIC</h2>
-      <p>CELL: 9942607766</p>
-      <div class="bill-type">QUOTATION</div>
-    </div>
-    <hr>
-    <div class="meta-row">
-      <div class="meta-left"><b>${custName}</b>${phone?"<br>"+phone:""}</div>
-      <div class="meta-right"><b>Date : ${dateStr}</b><br><b>Quot No : Q-${q.quot_id}</b></div>
-    </div>
-    <hr>
-    <table>
-      <thead><tr>
-        <th style="width:32px;">S.No</th>
+  const html = `<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    @page { size: 148mm 105mm; margin: 3mm 4mm; }
+    body { font-family: 'Courier New', monospace; font-size: 8pt; line-height: 1.3; background: white; }
+    .ih { text-align: center; margin-bottom: 4px; }
+    .ih h2 { font-size: 14pt; font-weight: bold; letter-spacing: 1px; }
+    .ih p { font-size: 8pt; margin: 1px 0; }
+    .iline { border-top: 1.5px solid #333; margin: 3px 0; }
+    .imeta { display: flex; justify-content: space-between; margin: 4px 0; font-size: 8pt; }
+    .itbl { width: 100%; border-collapse: collapse; margin: 4px 0; font-size: 8pt; }
+    .itbl th, .itbl td { border: 1px solid #333; padding: 3px 5px; }
+    .itbl th { text-align: center; font-weight: bold; }
+    .ifooter { font-size: 8pt; margin-top: 3px; }
+    .isign { text-align: right; margin-top: 10px; font-size: 8pt; }
+  </style>
+</head>
+<body>
+  <div class="ih">
+    <h2>${SHOP}</h2>
+    <p>CELL: ${PHONE}</p>
+    <p style="font-weight:bold; margin-top:3px; font-size:10pt;">QUOTATION</p>
+  </div>
+  <div class="iline"></div>
+  <div class="imeta">
+    <div><b>${custName}</b>${phone ? "<br>" + phone : ""}</div>
+    <div style="text-align:right;"><b>Date : ${dateStr}</b><br><b>Quot No : Q-${q.quot_id}</b></div>
+  </div>
+  <div class="iline"></div>
+  <table class="itbl">
+    <thead>
+      <tr>
+        <th style="width:30px;">S.No</th>
         <th style="text-align:left;">Description</th>
-        <th style="width:40px;">Qty</th>
-        <th style="width:65px;text-align:right;">Rate</th>
-        <th style="width:42px;">Disc%</th>
-        <th style="width:60px;text-align:right;">Disc ₹</th>
-        <th style="width:70px;text-align:right;">Amount</th>
-      </tr></thead>
-      <tbody>${itemRows}</tbody>
-      <tfoot><tr>
-        <td colspan="2" style="font-weight:bold;">Total</td>
-        <td style="text-align:center;font-weight:bold;">${totalQty}</td>
-        <td></td><td></td>
-        <td style="text-align:right;font-weight:bold;">${discTotal.toFixed(2)}</td>
-        <td style="text-align:right;font-weight:bold;">${total.toFixed(2)}</td>
-      </tr></tfoot>
-    </table>
-    <hr class="thin">
-    <div class="footer-row">
-      <span>E. &amp; O.E.</span><span>${total.toFixed(2)}</span>
+        <th style="width:35px;">Qty</th>
+        <th style="width:60px; text-align:right;">Rate</th>
+        <th style="width:40px;">Disc%</th>
+        <th style="width:55px; text-align:right;">Disc ₹</th>
+        <th style="width:65px; text-align:right;">Amount</th>
+      </tr>
+    </thead>
+    <tbody>${itemRows}</tbody>
+    <tfoot>
+      <tr>
+        <td colspan="2" style="font-weight:bold; text-align:left;">Total</td>
+        <td style="text-align:center; font-weight:bold;">${totalQty}</td>
+        <td></td>
+        <td></td>
+        <td style="text-align:right; font-weight:bold;">${discTotal.toFixed(2)}</td>
+        <td style="text-align:right; font-weight:bold;">${total.toFixed(2)}</td>
+      </tr>
+    </tfoot>
+  </table>
+  <div class="ifooter">
+    <div style="display:flex; justify-content:space-between; padding:2px 0;">
+      <span>E. &amp; O.E.</span>
+      <span>${total.toFixed(2)}</span>
     </div>
-    <hr class="thin">
-    <div class="footer-row">
-      <span class="amount-words">${amtWords}</span>
-      <span class="net-amount">Net Amount : ${total.toFixed(2)}</span>
+    <div class="iline" style="border-color:#555;"></div>
+    <div style="display:flex; justify-content:space-between; padding:2px 0;">
+      <span><i>${amtWords}</i></span>
+      <span><b>Net Amount : ${total.toFixed(2)}</b></span>
     </div>
-    <div class="sign-row">For SUN CERAMIC</div>
-  </body></html>`;
+  </div>
+  <div class="isign">
+    <p>For ${SHOP}</p>
+    <br>
+    <p>Authorised Signatory</p>
+  </div>
+</body>
+</html>`;
 
-  const win = window.open('','_blank','width=600,height=800');
+  const win = window.open('', '_blank', 'width=600,height=800');
   win.document.write(html);
   win.document.close();
   win.focus();
-  setTimeout(()=>{ win.print(); win.close(); }, 500);
+  setTimeout(() => { win.print(); win.close(); }, 500);
 }
 
 async function sharePDF(){
