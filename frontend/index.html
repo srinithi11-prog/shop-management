@@ -226,7 +226,7 @@ function revealProfit(){
 // ── KEYBOARD NAVIGATION ───────────────────────────────
 document.addEventListener("keydown", e=>{
   // Ctrl+F10 = unlock profit
-  if(e.ctrlKey && e.key==="F10"){ e.preventDefault(); revealProfit(); return; }
+  if(e.ctrlKey && e.key==="F10"){ e.preventDefault(); askProfitPassword(); return; }
 
   // ESC = dashboard (stays here)
   if(e.key==="Escape"){ window.location.href="index.html"; return; }
