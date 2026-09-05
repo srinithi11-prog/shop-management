@@ -134,7 +134,7 @@ app.delete("/product/:id", (req, res) => {
       });
     }
   );
-});
+}););
 
 app.get("/stock-worth", (req, res) => {
   db.query("SELECT SUM(remaining_quantity * mrp) as worth FROM product_batches", (err, r) => {
@@ -342,21 +342,32 @@ app.post("/create-bill-multi", (req, res) => {
                   [bill_id, batch_id, b.product_id || null, quantity, finalRate, finalTotal, profit, b.hsn_code || ""]
                 );
 
-                const newQty = b.remaining_quantity - quantity;
-                if (newQty <= 0) {
-                  db.query("DELETE FROM product_batches WHERE batch_id=?", [batch_id]);
-                } else {
-                  db.query("UPDATE product_batches SET remaining_quantity=? WHERE batch_id=?", [newQty, batch_id]);
-                }
-
-                processed++;
-                if (processed === items.length) {
-                  if (payment_mode === "CREDIT" && cust_id) {
-                    db.query("UPDATE customers SET balance = balance + ? WHERE customer_id=?", [grand_total, cust_id]);
-                    db.query("INSERT INTO transactions (customer_id, txn_type, amount, txn_date) VALUES (?,'CREDIT',?,NOW())", [cust_id, grand_total]);
+                // Use atomic UPDATE to avoid race conditions
+                // Deduct stock: remaining = MAX(0, remaining - quantity)
+                db.query(
+                  "UPDATE product_batches SET remaining_quantity = GREATEST(0, remaining_quantity - ?) WHERE batch_id=?",
+                  [quantity, batch_id],
+                  () => {
+                    // Check if stock is now 0 - set to 0 (don't delete so product still visible)
+                    db.query(
+                      "SELECT remaining_quantity FROM product_batches WHERE batch_id=?",
+                      [batch_id],
+                      (e2, r2) => {
+                        if (r2 && r2.length && r2[0].remaining_quantity <= 0) {
+                          // Set to exactly 0
+                          db.query("UPDATE product_batches SET remaining_quantity=0 WHERE batch_id=?", [batch_id]);
+                        }
+                        processed++;
+                        if (processed === items.length) {
+                          if (payment_mode === "CREDIT" && cust_id) {
+                            db.query("UPDATE customers SET balance = balance + ? WHERE customer_id=?", [grand_total, cust_id]);
+                          }
+                          return res.json({ bill_id, total: grand_total });
+                        }
+                      }
+                    );
                   }
-                  return res.json({ bill_id, total: grand_total });
-                }
+                );
               }
             );
           });
@@ -453,13 +464,23 @@ app.post("/cancel-bill/:id", (req, res) => {
     db.query("SELECT * FROM bill_items WHERE bill_id=?", [bill_id], (err2, items) => {
       if (err2) return res.status(500).json({ error: err2.message });
 
-      let done = 0;
-      const finish = () => {
-        done++;
-        if (done < items.length) return;
+      // onDone handles completion below
+
+      if (!items.length) {
+        // No items - just cancel the bill
         if (bill.payment_mode === "CREDIT" && bill.customer_id) {
           db.query("UPDATE customers SET balance = balance - ? WHERE customer_id=?", [bill.grand_total, bill.customer_id]);
-          db.query("INSERT INTO transactions (customer_id, txn_type, amount, txn_date) VALUES (?,'DEBIT',?,NOW())", [bill.customer_id, bill.grand_total]);
+        }
+        return db.query("UPDATE bills SET cancelled=1, cancelled_at=NOW() WHERE bill_id=?", [bill_id], () => res.json({ success: true }));
+      }
+
+      let doneCount = 0;
+      const onDone = () => {
+        doneCount++;
+        if (doneCount < items.length) return;
+        // All stock restored - now cancel bill and adjust credit
+        if (bill.payment_mode === "CREDIT" && bill.customer_id) {
+          db.query("UPDATE customers SET balance = GREATEST(0, balance - ?) WHERE customer_id=?", [bill.grand_total, bill.customer_id]);
         }
         db.query("UPDATE bills SET cancelled=1, cancelled_at=NOW() WHERE bill_id=?", [bill_id], (err3) => {
           if (err3) return res.status(500).json({ error: err3.message });
@@ -467,14 +488,25 @@ app.post("/cancel-bill/:id", (req, res) => {
         });
       };
 
-      if (!items.length) return finish();
-
       items.forEach(item => {
+        if (!item.batch_id) return onDone();
         db.query("SELECT * FROM product_batches WHERE batch_id=?", [item.batch_id], (err3, batches) => {
           if (batches && batches.length) {
-            db.query("UPDATE product_batches SET remaining_quantity = remaining_quantity + ? WHERE batch_id=?", [item.quantity, item.batch_id], () => finish());
+            // Batch exists - restore stock atomically
+            db.query(
+              "UPDATE product_batches SET remaining_quantity = remaining_quantity + ? WHERE batch_id=?",
+              [item.quantity, item.batch_id],
+              () => onDone()
+            );
+          } else if (item.product_id) {
+            // Batch was deleted (stock hit 0) - recreate it with the original quantity
+            db.query(
+              "INSERT INTO product_batches (product_id, purchase_price, mrp, quantity, remaining_quantity, min_stock) SELECT product_id, purchase_price, selling_price, ?, ?, 5 FROM bill_items WHERE item_id=? LIMIT 1",
+              [item.quantity, item.quantity, item.item_id],
+              () => onDone()
+            );
           } else {
-            finish();
+            onDone();
           }
         });
       });
@@ -1108,7 +1140,18 @@ app.put("/alter-bill/:id", (req, res) => {
           }
           db.query("INSERT INTO bill_items (bill_id, batch_id, product_id, quantity, selling_price, total_amount, profit, hsn_code, gst_percent, cgst, sgst) VALUES (?,?,?,?,?,?,0,'',0,0,0)",
             [bill_id, item.batch_id || null, item.product_id || null, item.quantity, item.rate, item.total_amount],
-            () => checkDone());
+            () => {
+              // Deduct stock atomically for new items
+              if (item.batch_id) {
+                db.query(
+                  "UPDATE product_batches SET remaining_quantity = GREATEST(0, remaining_quantity - ?) WHERE batch_id=?",
+                  [item.quantity, item.batch_id],
+                  () => checkDone()
+                );
+              } else {
+                checkDone();
+              }
+            });
         });
       }
     });
