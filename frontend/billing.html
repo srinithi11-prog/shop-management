@@ -1,40 +1,43 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Billing - SUN CERAMIC</title>
+  <title>Billing</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=Montserrat:wght@800;900&display=swap" rel="stylesheet">
   <style>
     *{box-sizing:border-box;margin:0;padding:0;}
     body{font-family:Arial,sans-serif;background:#f0f4f8;}
-    .topbar{background:#007bff;color:white;padding:14px 24px;}
+    .topbar{background:#007bff;color:white;padding:14px 24px;display:flex;justify-content:space-between;align-items:center;}
     .topbar h1{font-size:20px;}
     .nav{background:white;display:flex;gap:8px;padding:10px 20px;box-shadow:0 2px 6px rgba(0,0,0,0.08);flex-wrap:wrap;}
     .nav a{text-decoration:none;background:#007bff;color:white;padding:7px 14px;border-radius:6px;font-size:13px;position:relative;}
     .nav a:hover,.nav a.active{background:#0056b3;}
     .key-hint{position:absolute;top:-6px;right:-4px;background:#ff9800;color:white;font-size:9px;padding:1px 4px;border-radius:3px;font-weight:bold;}
-    .container{padding:18px 20px;max-width:980px;}
+    .container{padding:18px 24px;max-width:1100px;margin:auto;}
     .card{background:white;padding:18px;border-radius:10px;margin-bottom:16px;box-shadow:0 2px 8px rgba(0,0,0,0.08);}
     label{font-size:13px;color:#555;font-weight:bold;display:block;margin-bottom:3px;}
-    input,select{padding:7px 9px;border:1px solid #ccc;border-radius:5px;font-size:13px;outline:none;width:100%;}
-    input:focus{border-color:#007bff;}
+    select,input{padding:7px 9px;border:1px solid #ccc;border-radius:5px;font-size:13px;outline:none;width:100%;}
+    select:focus,input:focus{border-color:#007bff;}
     button{background:#007bff;color:white;border:none;padding:8px 16px;border-radius:5px;cursor:pointer;font-size:13px;font-weight:bold;}
     button:hover{background:#0056b3;}
     button.danger{background:#dc3545;}button.danger:hover{background:#a71d2a;}
     button.success{background:#28a745;}button.success:hover{background:#1a6e30;}
     button.warn{background:#fd7e14;}button.warn:hover{background:#c96a00;}
     button.purple{background:#6f42c1;}button.purple:hover{background:#5a32a3;}
-    button.grey{background:#6c757d;}button.grey:hover{background:#545b62;}
     .row{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:10px;}
     .f{display:flex;flex-direction:column;gap:3px;}
-    table{width:100%;border-collapse:collapse;}
-    th{background:#007bff;color:white;padding:8px;font-size:13px;}
-    td{padding:7px;border:1px solid #eee;font-size:13px;text-align:center;}
-    .search-wrap{position:relative;}
-    .cust-drop{position:absolute;top:100%;left:0;width:100%;background:white;border:1px solid #aaa;border-radius:6px;max-height:200px;overflow-y:auto;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,0.15);display:none;}
-    .cust-drop-item{padding:8px 12px;cursor:pointer;border-bottom:1px solid #f0f0f0;font-size:13px;}
-    .cust-drop-item:hover,.cust-drop-item.dp-active{background:#e8f0ff;}
+    table.bill-tbl{width:100%;border-collapse:collapse;margin-top:8px;}
+    table.bill-tbl th{background:#007bff;color:white;padding:8px 6px;font-size:12px;text-align:center;}
+    table.bill-tbl td{padding:4px;border:1px solid #eee;text-align:center;font-size:12px;vertical-align:middle;}
+    table.bill-tbl td input,table.bill-tbl td select{padding:5px;font-size:12px;border:1px solid #ccc;border-radius:4px;width:100%;}
+    .grand-total{text-align:right;font-size:17px;font-weight:bold;color:#28a745;margin-top:10px;}
+    .walkin-box{background:#fff8e1;border:1px solid #ffc107;border-radius:7px;padding:10px;margin-top:8px;}
+    .dup-box{background:#fff3cd;border:1px solid #fd7e14;border-radius:7px;padding:10px;margin-top:8px;display:none;}
+    .reg-box{background:#e8f7ef;border:1px solid #28a745;border-radius:7px;padding:8px;margin-top:6px;}
+    table.alter-tbl{width:100%;border-collapse:collapse;margin-top:8px;}
+    table.alter-tbl th{background:#fd7e14;color:white;padding:7px;font-size:12px;text-align:center;}
+    table.alter-tbl td{padding:4px;border:1px solid #eee;text-align:center;font-size:12px;vertical-align:middle;}
+    table.alter-tbl td input{padding:5px;font-size:12px;border:1px solid #ccc;border-radius:4px;width:100%;}
     .prod-drop{position:fixed;background:white;border:1px solid #aaa;border-radius:6px;max-height:200px;overflow-y:auto;z-index:99999;box-shadow:0 6px 20px rgba(0,0,0,0.2);display:none;min-width:240px;}
     .prod-drop.open{display:block;}
     .prod-drop-item{padding:9px 12px;cursor:pointer;border-bottom:1px solid #f0f0f0;}
@@ -42,14 +45,19 @@
     .pdi-code{font-size:11px;color:#007bff;font-weight:bold;font-family:monospace;}
     .pdi-name{font-size:13px;color:#222;}
     .selected-tag{font-size:11px;color:#28a745;font-weight:bold;margin-top:2px;}
-    table.alter-tbl{width:100%;border-collapse:collapse;margin-top:8px;}
-    table.alter-tbl th{background:#007bff;color:white;padding:7px;font-size:12px;text-align:center;}
-    table.alter-tbl td{padding:4px;border:1px solid #eee;text-align:center;font-size:12px;vertical-align:middle;}
-    table.alter-tbl td input{padding:5px;font-size:12px;border:1px solid #ccc;border-radius:4px;width:100%;}
+    .cust-drop{position:absolute;top:100%;left:0;width:100%;background:white;border:1px solid #aaa;border-radius:6px;max-height:200px;overflow-y:auto;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,0.15);display:none;}
+    .cust-drop-item{padding:8px 12px;cursor:pointer;border-bottom:1px solid #f0f0f0;font-size:13px;}
+    .cust-drop-item:hover,.cust-drop-item.dp-active{background:#e8f0ff;}
   </style>
 </head>
 <body>
-<div class="topbar"><h1>🧾 New Billing</h1></div>
+<div class="topbar"><h1>🧾 Sales Billing</h1><span id="fyLabel" style="font-size:13px;opacity:0.85;"></span></div>
+<div style="background:#0056b3;color:white;padding:6px 24px;display:flex;gap:24px;flex-wrap:wrap;font-size:13px;">
+  <span>📋 Last Q No: <b id="lastBillNo" style="font-size:15px;">—</b></span>
+  <span>📅 Today's Bills: <b id="todayBillCount">—</b></span>
+  <span>📦 Total Bills: <b id="totalBillCount">—</b></span>
+  <span>💰 Today's Sales: <b id="todaySalesAmt">—</b></span>
+</div>
 <div class="nav">
   <a href="index.html">🏠 Home<span class="key-hint">0</span></a>
   <a href="billing.html" class="active">🧾 Billing<span class="key-hint">1</span></a>
@@ -63,156 +71,199 @@
   <a href="retrieve-bill.html">🔍 Find Bill<span class="key-hint">9</span></a>
 </div>
 <div class="container">
-  <!-- Customer Details Card -->
   <div class="card">
-    <h3 style="margin-bottom:12px;">👤 Customer & Bill Info</h3>
+    <h2 style="margin-bottom:14px;color:#007bff;">Create Sales Bill</h2>
     <div class="row">
-      <div class="f" style="flex:1;">
-        <label>Customer Name</label>
-        <div class="search-wrap">
-          <input id="custName" placeholder="Type customer name..." oninput="onCustSearch()" onkeydown="custDropKey(event)" autocomplete="off">
+      <div class="f" style="width:140px;"><label>Payment</label>
+        <select id="paymentType" onchange="onPaymentChange()">
+          <option value="Cash">Cash</option><option value="UPI">UPI</option><option value="CREDIT">Credit</option>
+        </select>
+      </div>
+      <div class="f" style="width:160px;"><label>Date</label>
+        <select id="dateOption" onchange="toggleDateInput()"><option value="today">Today</option><option value="custom">Custom Date</option></select>
+      </div>
+      <div class="f" id="customDateBox" style="display:none;width:150px;"><label>Select Date</label><input type="date" id="customDate"></div>
+      <div class="f" id="todayBox"><label>&nbsp;</label><span id="todayLabel" style="padding:7px 10px;background:#f0f4f8;border-radius:5px;font-size:13px;display:block;"></span></div>
+    </div>
+    <div class="row" style="margin-bottom:4px;">
+      <div class="f" style="flex:1;"><label>Regular Customer (type to search)</label>
+        <div style="position:relative;">
+          <input id="custSearch" placeholder="Type name to search..." oninput="searchCustomers()" onkeydown="custDropKey(event)" autocomplete="off" style="width:100%;">
           <div class="cust-drop" id="custDrop"></div>
         </div>
         <div id="custSelected" style="font-size:12px;color:#28a745;margin-top:3px;"></div>
-      </div>
-      <div class="f" style="width:180px;">
-        <label>Phone Number</label>
-        <input id="custPhone" placeholder="Phone number...">
-      </div>
-      <div class="f" style="width:140px;">
-        <label>Payment Mode</label>
-        <select id="payMode">
-          <option value="Cash">Cash</option>
-          <option value="UPI">UPI / Online</option>
-          <option value="Card">Card</option>
-          <option value="Credit">Credit / Outstanding</option>
-        </select>
-      </div>
-      <div class="f" style="width:140px;">
-        <label>Bill Date</label>
-        <input type="date" id="billDate">
+        <input type="hidden" id="custId">
+        <button onclick="clearCustomer()" id="clearCustBtn" style="display:none;margin-top:3px;padding:3px 10px;font-size:12px;background:#888;width:auto;">✕ Clear</button>
       </div>
     </div>
-  </div>
-
-  <!-- Items Card -->
-  <div class="card">
-    <h3 style="margin-bottom:12px;">📦 Items</h3>
-    <div style="overflow-x:auto;">
-      <table class="alter-tbl">
-        <thead>
-          <tr>
-            <th>#</th>
-            <th style="width:120px;">Code</th>
-            <th>Name</th>
-            <th style="width:160px;">Batch / Price</th>
-            <th style="width:80px;">Qty</th>
-            <th style="width:100px;">Rate ₹</th>
-            <th style="width:110px;">Amount ₹</th>
-            <th style="width:50px;">Del</th>
-          </tr>
-        </thead>
+    <div class="walkin-box" id="walkinBox">
+      <p style="font-size:12px;color:#856404;font-weight:bold;margin-bottom:8px;">📝 Walk-in Customer</p>
+      <div class="row">
+        <div class="f"><label>Name *</label><input id="walkinName" placeholder="Customer name" oninput="checkDup()"></div>
+        <div class="f"><label>Phone</label><input id="walkinPhone" placeholder="Optional"></div>
+      </div>
+      <div class="dup-box" id="dupBox">
+        <b style="color:#856404;">⚠️ Similar customer found:</b>
+        <div id="dupList" style="margin:6px 0;font-size:13px;"></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="success" onclick="useExisting()" style="font-size:12px;padding:5px 12px;">✅ Same Person — Use Existing</button>
+          <button onclick="dismissDup()" style="font-size:12px;padding:5px 12px;background:#888;">Different Person</button>
+        </div>
+      </div>
+      <div class="reg-box" id="regBox">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:normal;font-size:13px;">
+          <input type="checkbox" id="saveRegular" style="width:auto;">
+          <span>Save as <b>Regular Customer</b> (shows in dropdown for future bills)</span>
+        </label>
+        <p style="font-size:11px;color:#666;margin-top:3px;">Credit customers are always saved automatically</p>
+      </div>
+    </div>
+    <div style="overflow-x:auto;margin-top:12px;">
+      <table class="bill-tbl">
+        <thead><tr>
+          <th style="width:32px;">#</th><th style="width:105px;">Code</th>
+          <th style="width:165px;">Name</th><th style="width:160px;">Price/Batch</th>
+          <th style="width:58px;">Qty</th><th style="width:80px;">Rate ₹</th>
+          <th style="width:88px;">Amount ₹</th><th style="width:36px;" class="no-print">✕</th>
+        </tr></thead>
         <tbody id="billBody"></tbody>
       </table>
     </div>
-    <div style="margin-top:12px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
-      <button onclick="addRow()" style="background:#007bff;">➕ Add Item</button>
-      <div style="text-align:right;font-size:16px;font-weight:bold;color:#007bff;" id="billTotal">Total: ₹0.00</div>
+    <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
+      <button onclick="addRow()">➕ Add Row</button>
+      <button class="success" onclick="submitBill()">✅ Create Bill</button>
     </div>
+    <div class="grand-total" id="grandTotal">Grand Total: ₹0.00</div>
   </div>
-
-  <!-- Action Bar -->
-  <div class="card" style="display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;">
-    <button class="grey" onclick="clearBill()">Clear</button>
-    <button class="success" onclick="saveAndGenerateBill()">💾 Save & Generate Bill</button>
-  </div>
-
-  <!-- Invoice Preview Section -->
-  <div class="card" id="previewCard" style="display:none;">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
-      <h3>Invoice Preview</h3>
+  <div class="card" id="invoiceCard" style="display:none;">
+    <div class="no-print" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+      <div>
+        <h2 style="color:#28a745;">✅ Bill Created</h2>
+        <div style="font-size:16px;font-weight:bold;color:#007bff;margin-top:4px;" id="createdBillNo"></div>
+      </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <button class="warn" onclick="printBill()">🖨️ Print</button>
         <button class="purple" id="sharePdfBtn" onclick="sharePDF()">📤 Share PDF</button>
+        <button class="warn" onclick="showAlterSection()">✏️ Alter Bill</button>
+        <button onclick="newBill()">➕ New Bill</button>
       </div>
     </div>
     <div id="invoiceArea"></div>
+    <div id="alterSection" style="display:none;margin-top:16px;border-top:2px solid #eee;padding-top:14px;" class="no-print">
+      <h4 style="color:#fd7e14;margin-bottom:10px;">✏️ Alter Bill</h4>
+      <div style="overflow-x:auto;">
+        <table class="alter-tbl">
+          <thead><tr><th>#</th><th>Code</th><th>Name</th><th>Batch</th><th>Qty</th><th>Rate ₹</th><th>Amount ₹</th><th>Del</th></tr></thead>
+          <tbody id="alterBody"></tbody>
+        </table>
+      </div>
+      <div style="margin-top:10px;display:flex;gap:8px;">
+        <button onclick="addAlterRow()" style="background:#fd7e14;">➕ Add Item</button>
+        <button class="success" onclick="saveAlter()">💾 Save</button>
+        <button onclick="hideAlterSection()">Cancel</button>
+      </div>
+      <div style="text-align:right;font-size:16px;font-weight:bold;color:#fd7e14;margin-top:8px;" id="alterTotal"></div>
+    </div>
   </div>
 </div>
-
 <div class="prod-drop" id="prodDrop"></div>
-
 <script>
 const API="http://localhost:3000";
-const SHOP="SUN CERAMIC",PHONE_NO="9942607766";
+const SHOP="SUN CERAMIC",PHONE="9942607766";
 if(!sessionStorage.getItem("loggedIn"))window.location.href="login.html";
-
-let allCustomers=[],allProducts=[],createdBill=null;
-let rowCount=0;
+let rowCount=0,allProducts=[],allRegular=[],currentBill=null;
+let alterRowCount=0,deletedAlterIds=[];
 let activeInput=null,activeRow=null,dropIdx=-1,custIdx=-1;
-
-function esc(str){
-  return String(str || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-}
+let dupMatches=[];
 
 window.addEventListener("DOMContentLoaded",()=>{
-  document.getElementById("billDate").valueAsDate = new Date();
-  fetch(API+"/customers").then(r=>r.json()).then(d=>{allCustomers=d;}).catch(()=>{});
-  fetch(API+"/products").then(r=>r.json()).then(d=>{allProducts=d;}).catch(()=>{});
-  addRow();
-
+  document.getElementById("todayLabel").innerText=new Date().toLocaleDateString("en-IN",{weekday:"short",year:"numeric",month:"short",day:"numeric"});
+  document.getElementById("customDate").value=new Date().toISOString().split("T")[0];
+  fetch(API+"/active-year").then(r=>r.json()).then(fy=>{if(fy)document.getElementById("fyLabel").innerText="FY: "+fy.year_label;}).catch(()=>{});
+  loadBillStats();
+  fetch(API+"/products").then(r=>r.json()).then(d=>{allProducts=d;addRow();}).catch(()=>addRow());
+  loadRegular();
   document.addEventListener("mousedown",e=>{
-    const cd=document.getElementById("custDrop");
-    if(cd&&!cd.contains(e.target)&&e.target!==document.getElementById("custName"))cd.style.display="none";
     const pd=document.getElementById("prodDrop");
     if(pd&&!pd.contains(e.target)&&e.target!==activeInput)hideProdDrop();
+    const cd=document.getElementById("custDrop");
+    if(cd&&!cd.contains(e.target)&&e.target!==document.getElementById("custSearch"))cd.style.display="none";
   });
 });
 
-// Customer Search Dropdown
-function onCustSearch(){
-  const q=document.getElementById("custName").value.trim().toLowerCase();
-  const drop=document.getElementById("custDrop");
-  custIdx=-1;
-  document.getElementById("custSelected").innerText="";
+function toggleDateInput(){const c=document.getElementById("dateOption").value==="custom";document.getElementById("customDateBox").style.display=c?"flex":"none";document.getElementById("todayBox").style.display=c?"none":"flex";}
+function onPaymentChange(){if(document.getElementById("paymentType").value==="CREDIT"&&!document.getElementById("custId").value){document.getElementById("saveRegular").checked=true;document.getElementById("saveRegular").disabled=true;}else{document.getElementById("saveRegular").disabled=false;}}
+function loadRegular(){fetch(API+"/regular-customers").then(r=>r.json()).then(d=>{allRegular=d;});}
+
+function loadBillStats(){
+  fetch(API+"/bill-stats").then(r=>r.json()).then(d=>{
+    document.getElementById("lastBillNo").innerText = d.last_bill_id ? "Q-"+d.last_bill_id : "—";
+    document.getElementById("todayBillCount").innerText = d.today_bills||0;
+    document.getElementById("totalBillCount").innerText = d.total_bills||0;
+    document.getElementById("todaySalesAmt").innerText = "₹"+parseFloat(d.today_sales||0).toFixed(2);
+  }).catch(()=>{
+    document.getElementById("lastBillNo").innerText = "—";
+  });
+}
+
+function searchCustomers(){
+  const q=document.getElementById("custSearch").value.trim().toLowerCase();
+  const drop=document.getElementById("custDrop");custIdx=-1;
   if(q.length<1){drop.style.display="none";return;}
-  const matches=allCustomers.filter(c=>c.name.toLowerCase().includes(q)||(c.phone||"").includes(q)).slice(0,10);
+  const matches=allRegular.filter(c=>c.name.toLowerCase().includes(q)||(c.phone||"").includes(q)).slice(0,10);
   if(!matches.length){drop.style.display="none";return;}
   drop.innerHTML=matches.map((c,i)=>`
-    <div class="cust-drop-item" id="cdi_${i}" onmousedown="pickCustomer('${esc(c.name)}','${esc(c.phone||"")}')">
+    <div class="cust-drop-item" id="cdi_${i}"
+      onmousedown="pickCustomer(${c.customer_id},'${esc(c.name)}','${c.phone||""}',${parseFloat(c.balance)||0})">
       <b>${c.name}</b>${c.phone?" | "+c.phone:""}
+      ${parseFloat(c.balance)>0?`<span style="color:#dc3545;font-size:11px;"> Due:₹${parseFloat(c.balance).toFixed(2)}</span>`:""}
     </div>`).join("");
   drop.style.display="block";
 }
 
 function custDropKey(e){
-  const drop=document.getElementById("custDrop");
-  const items=drop.querySelectorAll(".cust-drop-item");
-  if(!items.length||drop.style.display==="none") return;
+  const drop=document.getElementById("custDrop");const items=drop.querySelectorAll(".cust-drop-item");
+  if(!items.length||drop.style.display==="none")return;
   if(e.key==="ArrowDown"){e.preventDefault();custIdx=Math.min(custIdx+1,items.length-1);hlC(items);return;}
   if(e.key==="ArrowUp"){e.preventDefault();custIdx=Math.max(custIdx-1,0);hlC(items);return;}
-  if(e.key==="Enter"){
-    if(custIdx>=0){e.preventDefault();items[custIdx].dispatchEvent(new MouseEvent("mousedown",{bubbles:true}));return;}
-    drop.style.display="none";
-  }
+  if(e.key==="Enter"&&custIdx>=0){e.preventDefault();items[custIdx].dispatchEvent(new MouseEvent("mousedown",{bubbles:true}));return;}
   if(e.key==="Escape"){drop.style.display="none";custIdx=-1;}
 }
 
-function hlC(items){
-  items.forEach((el,i)=>el.classList.toggle("dp-active",i===custIdx));
-  if(items[custIdx])items[custIdx].scrollIntoView({block:"nearest"});
+function hlC(items){items.forEach((el,i)=>el.classList.toggle("dp-active",i===custIdx));if(items[custIdx])items[custIdx].scrollIntoView({block:"nearest"});}
+
+function pickCustomer(id,name,phone,due){
+  document.getElementById("custId").value=id;document.getElementById("custSearch").value=name;
+  document.getElementById("custSelected").innerText="✅ "+name+(phone?" | "+phone:"")+(due>0?" | Due:₹"+due.toFixed(2):"");
+  document.getElementById("custDrop").style.display="none";document.getElementById("clearCustBtn").style.display="inline-block";
+  document.getElementById("walkinBox").style.display="none";custIdx=-1;
 }
 
-function pickCustomer(name,phone){
-  document.getElementById("custName").value=name;
-  document.getElementById("custPhone").value=phone;
-  document.getElementById("custSelected").innerText="✅ "+name;
-  document.getElementById("custDrop").style.display="none";
-  custIdx=-1;
+function clearCustomer(){
+  document.getElementById("custId").value="";document.getElementById("custSearch").value="";
+  document.getElementById("custSelected").innerText="";document.getElementById("clearCustBtn").style.display="none";
+  document.getElementById("walkinBox").style.display="block";
 }
 
-// Product Dropdown
-function showProdDrop(inputEl,rowId,fieldType){
+let dupTimer=null;
+function checkDup(){
+  const name=document.getElementById("walkinName").value.trim();
+  clearTimeout(dupTimer);
+  if(name.length<2){document.getElementById("dupBox").style.display="none";return;}
+  dupTimer=setTimeout(()=>{
+    fetch(API+"/check-customer-name?name="+encodeURIComponent(name)).then(r=>r.json()).then(matches=>{
+      if(!matches.length){document.getElementById("dupBox").style.display="none";return;}
+      dupMatches=matches;
+      document.getElementById("dupList").innerHTML=matches.map(c=>`<div style="padding:3px 0;"><b>${c.name}</b>${c.phone?" | "+c.phone:""}${parseFloat(c.balance)>0?" | Due:₹"+parseFloat(c.balance).toFixed(2):""}</div>`).join("");
+      document.getElementById("dupBox").style.display="block";
+    });
+  },500);
+}
+
+function useExisting(){if(!dupMatches.length)return;const c=dupMatches[0];pickCustomer(c.customer_id,c.name,c.phone||"",parseFloat(c.balance)||0);document.getElementById("dupBox").style.display="none";}
+function dismissDup(){document.getElementById("dupBox").style.display="none";}
+
+function showProdDrop(inputEl,rowId,fieldType,ctx){
   activeInput=inputEl;activeRow=rowId;dropIdx=-1;
   const q=inputEl.value.trim().toLowerCase();
   const drop=document.getElementById("prodDrop");
@@ -220,7 +271,7 @@ function showProdDrop(inputEl,rowId,fieldType){
   const matches=(fieldType==="code"?allProducts.filter(p=>(p.product_code||"").toLowerCase().includes(q)):allProducts.filter(p=>p.name.toLowerCase().includes(q))).slice(0,10);
   if(!matches.length){hideProdDrop();return;}
   drop.innerHTML=matches.map((p,i)=>`
-    <div class="prod-drop-item" id="pdrop_${i}" onmousedown="pickProduct(event,${p.product_id},'${esc(p.name)}','${esc(p.product_code||"")}')">
+    <div class="prod-drop-item" id="pdrop_${i}" onmousedown="pickProduct(event,${p.product_id},'${esc(p.name)}','${esc(p.product_code||"")}','${ctx}')">
       <div class="pdi-code">${p.product_code||"(no code)"}</div>
       <div class="pdi-name">${p.name}${p.brand?" — "+p.brand:""}</div>
     </div>`).join("");
@@ -231,198 +282,96 @@ function showProdDrop(inputEl,rowId,fieldType){
 
 function hideProdDrop(){document.getElementById("prodDrop").classList.remove("open");dropIdx=-1;activeInput=null;}
 
-function handleRowKey(e,rowId,fieldType){
+function handleProdKey(e,rowId,fieldType,ctx){
   const drop=document.getElementById("prodDrop");const isOpen=drop.classList.contains("open");const items=drop.querySelectorAll(".prod-drop-item");
-  if(e.key==="ArrowDown"){
-    e.preventDefault();
-    if(!isOpen)showProdDrop(e.target,rowId,fieldType);
-    dropIdx=Math.min(dropIdx+1,items.length-1);
-    items.forEach((el,i)=>el.classList.toggle("dp-active",i===dropIdx));
-    if(items[dropIdx])items[dropIdx].scrollIntoView({block:"nearest"});
-    return;
-  }
-  if(e.key==="ArrowUp"){
-    e.preventDefault();
-    dropIdx=Math.max(dropIdx-1,0);
-    items.forEach((el,i)=>el.classList.toggle("dp-active",i===dropIdx));
-    if(items[dropIdx])items[dropIdx].scrollIntoView({block:"nearest"});
-    return;
-  }
-  if(e.key==="Enter"){
-    if(isOpen&&dropIdx>=0&&items[dropIdx]){
-      e.preventDefault();
-      items[dropIdx].dispatchEvent(new MouseEvent("mousedown",{bubbles:true}));
-      return;
-    }
-    if(isOpen&&items.length===1){
-      e.preventDefault();
-      items[0].dispatchEvent(new MouseEvent("mousedown",{bubbles:true}));
-      return;
-    }
-    e.preventDefault();
-    const q=document.getElementById("rqty_"+rowId);
-    if(q)q.focus();
-    return;
-  }
-  if(e.key==="Escape")hideProdDrop();
-  if(e.key==="Tab")hideProdDrop();
+  if(e.key==="ArrowDown"){e.preventDefault();if(!isOpen)showProdDrop(e.target,rowId,fieldType,ctx);dropIdx=Math.min(dropIdx+1,items.length-1);items.forEach((el,i)=>el.classList.toggle("dp-active",i===dropIdx));if(items[dropIdx])items[dropIdx].scrollIntoView({block:"nearest"});return;}
+  if(e.key==="ArrowUp"){e.preventDefault();dropIdx=Math.max(dropIdx-1,0);items.forEach((el,i)=>el.classList.toggle("dp-active",i===dropIdx));if(items[dropIdx])items[dropIdx].scrollIntoView({block:"nearest"});return;}
+  if(e.key==="Enter"){if(isOpen&&dropIdx>=0&&items[dropIdx]){e.preventDefault();items[dropIdx].dispatchEvent(new MouseEvent("mousedown",{bubbles:true}));return;}if(isOpen&&items.length===1){e.preventDefault();items[0].dispatchEvent(new MouseEvent("mousedown",{bubbles:true}));return;}e.preventDefault();const qEl=document.getElementById((ctx==="alter"?"ar":"")+"qty_"+rowId);if(qEl)qEl.focus();return;}
+  if(e.key==="Escape")hideProdDrop();if(e.key==="Tab")hideProdDrop();
 }
 
-function pickProduct(e,pid,name,code){
-  e.preventDefault();const id=activeRow;
-  document.getElementById("rcode_"+id).value=code;
-  document.getElementById("rname_"+id).value=name;
-  document.getElementById("rpid_"+id).value=pid;
-  document.getElementById("rtag_"+id).innerText="✅ "+name;
-  hideProdDrop();
-  loadBatches(id,pid);
-  setTimeout(()=>{const q=document.getElementById("rqty_"+id);if(q)q.focus();},50);
+function pickProduct(e,pid,name,code,ctx){
+  e.preventDefault();const id=activeRow||0;
+  if(ctx==="alter"){document.getElementById("arcode_"+id).value=code;document.getElementById("arname_"+id).value=name;document.getElementById("arpid_"+id).value=pid;document.getElementById("artag_"+id).innerText="✅ "+name;hideProdDrop();loadBatches("arbatch_"+id,pid);}
+  else{document.getElementById("pcode_"+id).value=code;document.getElementById("pname_"+id).value=name;document.getElementById("ppid_"+id).value=pid;document.getElementById("ptag_"+id).innerText="✅ "+name;hideProdDrop();loadBatches("batch_"+id,pid);}
+  setTimeout(()=>{const q=document.getElementById((ctx==="alter"?"ar":"")+"qty_"+id);if(q)q.focus();},50);
 }
 
-function loadBatches(rowId,pid){
-  if(!pid)return;
-  const sel=document.getElementById("rbatch_"+rowId);
+function loadBatches(selId,pid){
+  const sel=document.getElementById(selId);if(!sel)return;
   sel.innerHTML=`<option value="">Loading...</option>`;
   fetch(API+"/batches/"+pid).then(r=>r.json()).then(batches=>{
     if(!batches.length){sel.innerHTML=`<option value="">No stock</option>`;return;}
     sel.innerHTML=`<option value="">— Select price —</option>`;
-    batches.forEach(b=>{
-      sel.innerHTML+=`<option value="${b.batch_id}" data-mrp="${b.mrp}">₹${parseFloat(b.mrp).toFixed(2)} | Stk:${b.remaining_quantity}</option>`;
-    });
+    batches.forEach(b=>{sel.innerHTML+=`<option value="${b.batch_id}" data-mrp="${b.mrp}">₹${parseFloat(b.mrp).toFixed(2)} | Stk:${b.remaining_quantity}</option>`;});
   });
 }
 
-function onBatchChange(rowId){
-  const sel=document.getElementById("rbatch_"+rowId);
-  const opt=sel.options[sel.selectedIndex];
-  if(opt && opt.dataset.mrp){
-    document.getElementById("rrate_"+rowId).value = parseFloat(opt.dataset.mrp).toFixed(2);
-    calcRow(rowId);
-  }
-}
+function esc(s){return (s||"").replace(/'/g,"\\'").replace(/"/g,'\\"');}
 
-// Table Rows Setup
 function addRow(){
   rowCount++;const id=rowCount;
-  const tr=document.createElement("tr");tr.id="brow_"+id;
-  tr.innerHTML=`
-    <td>${id}</td>
-    <td><input id="rcode_${id}" placeholder="Code"
-      oninput="showProdDrop(this,${id},'code')" onfocus="showProdDrop(this,${id},'code')"
-      onkeydown="handleRowKey(event,${id},'code')" autocomplete="off"></td>
-    <td><input id="rname_${id}" placeholder="Name"
-      oninput="showProdDrop(this,${id},'name')" onfocus="showProdDrop(this,${id},'name')"
-      onkeydown="handleRowKey(event,${id},'name')" autocomplete="off">
-      <div class="selected-tag" id="rtag_${id}"></div>
-      <input type="hidden" id="rpid_${id}">
-    </td>
-    <td><select id="rbatch_${id}" onchange="onBatchChange(${id})"><option value="">Select product</option></select></td>
-    <td><input type="number" id="rqty_${id}" value="1" min="1" oninput="calcRow(${id})" onkeydown="if(event.key==='Enter'){event.preventDefault();document.getElementById('rrate_'+${id}).focus();}"></td>
-    <td><input type="number" id="rrate_${id}" value="0.00" oninput="calcRow(${id})" onkeydown="if(event.key==='Enter'){event.preventDefault();document.getElementById('ramt_'+${id}).focus();}"></td>
-    <td><input type="number" id="ramt_${id}" value="0.00" oninput="calcTotal()"></td>
+  const tr=document.createElement("tr");tr.id="billrow_"+id;
+  tr.innerHTML=`<td>${id}</td>
+    <td><input id="pcode_${id}" placeholder="Code" oninput="showProdDrop(this,${id},'code','create')" onfocus="showProdDrop(this,${id},'code','create')" onkeydown="handleProdKey(event,${id},'code','create')" autocomplete="off"></td>
+    <td><input id="pname_${id}" placeholder="Name" oninput="showProdDrop(this,${id},'name','create')" onfocus="showProdDrop(this,${id},'name','create')" onkeydown="handleProdKey(event,${id},'name','create')" autocomplete="off">
+    <div class="selected-tag" id="ptag_${id}"></div><input type="hidden" id="ppid_${id}"></td>
+    <td><select id="batch_${id}" onchange="onBC(${id})" onkeydown="if(event.key==='Enter'){event.preventDefault();document.getElementById('qty_'+${id}).focus();}"><option value="">Select product first</option></select></td>
+    <td><input type="number" id="qty_${id}" value="1" min="1" oninput="calcRow(${id})" onkeydown="if(event.key==='Enter'){event.preventDefault();document.getElementById('rate_'+${id}).focus();}"></td>
+    <td><input type="number" id="rate_${id}" placeholder="0.00" oninput="calcRow(${id})" onkeydown="if(event.key==='Enter'){event.preventDefault();document.getElementById('amt_'+${id}).focus();}"></td>
+    <td><input type="number" id="amt_${id}" placeholder="0.00" oninput="calcGT()" onkeydown="if(event.key==='Enter'){event.preventDefault();addRow();}"></td>
     <td><button class="danger" onclick="delRow(${id})" style="padding:3px 7px;font-size:11px;">✕</button></td>`;
   document.getElementById("billBody").appendChild(tr);
+  document.getElementById("pcode_"+id).focus();
 }
 
-function delRow(rowId){
-  const row=document.getElementById("brow_"+rowId);
-  if(row) row.remove();
-  calcTotal();
-}
+function onBC(id){const sel=document.getElementById("batch_"+id);const opt=sel.options[sel.selectedIndex];if(!opt||!opt.dataset.mrp)return;document.getElementById("rate_"+id).value=parseFloat(opt.dataset.mrp).toFixed(2);calcRow(id);}
+function calcRow(id){const q=parseFloat(document.getElementById("qty_"+id).value)||0;const r=parseFloat(document.getElementById("rate_"+id).value)||0;document.getElementById("amt_"+id).value=(q*r).toFixed(2);calcGT();}
+function delRow(id){const el=document.getElementById("billrow_"+id);if(el)el.remove();calcGT();}
+function calcGT(){let t=0;for(let i=1;i<=rowCount;i++){const el=document.getElementById("amt_"+i);if(el)t+=parseFloat(el.value)||0;}document.getElementById("grandTotal").innerText="Grand Total: ₹"+t.toFixed(2);}
+function getBillDate(){if(document.getElementById("dateOption").value==="custom"){const d=document.getElementById("customDate").value;if(!d){alert("Select a date");return null;}return d;}return new Date().toISOString().split("T")[0];}
 
-function calcRow(rowId){
-  const qty=parseFloat(document.getElementById("rqty_"+rowId).value)||0;
-  const rate=parseFloat(document.getElementById("rrate_"+rowId).value)||0;
-  document.getElementById("ramt_"+rowId).value = (qty * rate).toFixed(2);
-  calcTotal();
-}
-
-function calcTotal(){
-  let total=0;
-  const rows=document.querySelectorAll("#billBody tr");
-  rows.forEach(tr=>{
-    const amtInput=tr.querySelector("input[id^='ramt_']");
-    if(amtInput) total += parseFloat(amtInput.value)||0;
-  });
-  document.getElementById("billTotal").innerText="Total: ₹" + total.toFixed(2);
-}
-
-function clearBill(){
-  document.getElementById("custName").value="";
-  document.getElementById("custPhone").value="";
-  document.getElementById("custSelected").innerText="";
-  document.getElementById("payMode").value="Cash";
-  document.getElementById("billDate").valueAsDate=new Date();
-  document.getElementById("billBody").innerHTML="";
-  document.getElementById("previewCard").style.display="none";
-  rowCount=0;
-  addRow();
-  calcTotal();
-}
-
-// Save & Create Bill
-function saveAndGenerateBill(){
-  const custName=document.getElementById("custName").value.trim()||"Walk-in";
-  const phone=document.getElementById("custPhone").value.trim();
-  const payMode=document.getElementById("payMode").value;
-  const billDate=document.getElementById("billDate").value;
-
-  const rows=document.querySelectorAll("#billBody tr");
+async function submitBill(){
+  const payment_mode=document.getElementById("paymentType").value;
+  const bill_date=getBillDate();if(!bill_date)return;
+  const customer_id=document.getElementById("custId").value;
   const items=[];
-  for(let tr of rows){
-    const id = tr.id.replace("brow_","");
-    const product_id = document.getElementById("rpid_"+id).value;
-    const batch_id = document.getElementById("rbatch_"+id).value;
-    const qty = parseInt(document.getElementById("rqty_"+id).value)||0;
-    const rate = parseFloat(document.getElementById("rrate_"+id).value)||0;
-    const total_amount = parseFloat(document.getElementById("ramt_"+id).value)||0;
-    const prodName = document.getElementById("rname_"+id).value;
-
-    if(!product_id){
-      alert("Please select a product for all rows.");
-      return;
-    }
-    items.push({ product_id, batch_id, quantity: qty, rate, total_amount, product_name: prodName });
+  for(let i=1;i<=rowCount;i++){
+    const bEl=document.getElementById("batch_"+i);const qEl=document.getElementById("qty_"+i);const rEl=document.getElementById("rate_"+i);const aEl=document.getElementById("amt_"+i);const pEl=document.getElementById("ppid_"+i);
+    if(!document.getElementById("billrow_"+i)||!bEl||!bEl.value)continue;
+    const qty=parseInt(qEl.value)||1;const rate=parseFloat(rEl.value)||0;
+    if(qty<=0||rate<=0)continue;
+    items.push({product_id:pEl.value,batch_id:bEl.value,quantity:qty,rate,total_amount:parseFloat(aEl.value)||rate*qty});
   }
-
-  if(!items.length){
-    alert("Please add at least one item.");
-    return;
+  if(!items.length){alert("Add at least one item with product and price selected");return;}
+  const body={items,payment_mode,customer_id:customer_id||null,bill_date};
+  if(!customer_id){
+    const wname=document.getElementById("walkinName").value.trim();
+    if(!wname){alert("Enter customer name");return;}
+    body.walkin_name=wname;body.walkin_phone=document.getElementById("walkinPhone").value.trim();
+    body.save_as_regular=document.getElementById("saveRegular").checked||(payment_mode==="CREDIT");
   }
-
-  const payload = {
-    customer_name: custName,
-    phone: phone,
-    payment_mode: payMode,
-    bill_date: billDate,
-    items: items
-  };
-
-  fetch(API + "/create-bill", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload)
-  })
-  .then(r => r.json())
-  .then(data => {
-    if(data.success || data.bill_id){
-      alert("Bill saved successfully!");
-      const billId = data.bill_id || data.id;
-      fetch(API + "/bill/" + billId).then(r=>r.json()).then(b=>{
-        createdBill = b;
-        createdBill.bill_id = billId;
-        buildInvoiceDisplay(b);
-        document.getElementById("previewCard").style.display="block";
-        document.getElementById("previewCard").scrollIntoView({behavior:"smooth"});
-      });
-    } else {
-      alert("Failed to save bill: " + (data.error || "Unknown error"));
+  fetch(API+"/create-bill-multi",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)})
+  .then(r=>r.json()).then(d=>{
+    if(d.error){alert("Error: "+d.error);return;}
+    if(!customer_id&&body.save_as_regular&&d.customer_id){
+      fetch(API+"/mark-regular/"+d.customer_id,{method:"POST"}).catch(()=>{});
     }
-  })
-  .catch(err => alert("Error: " + err.message));
+    loadRegular();loadBillStats();showInvoice(d.bill_id);
+  }).catch(err=>alert("Error: "+err.message));
 }
 
-// Helper to convert number to words
+function showInvoice(bill_id){
+  fetch(API+"/bill/"+bill_id).then(r=>r.json()).then(b=>{
+    currentBill=b;buildInvoice(b,"invoiceArea");
+    document.getElementById("alterSection").style.display="none";
+    document.getElementById("invoiceCard").style.display="block";
+    const bnEl=document.getElementById("createdBillNo");
+    if(bnEl) bnEl.innerText="Q No: "+b.bill_no;
+    document.getElementById("invoiceCard").scrollIntoView({behavior:"smooth"});
+  });
+}
+
 function toWords(n){
   const a=["","One","Two","Three","Four","Five","Six","Seven","Eight","Nine","Ten","Eleven","Twelve","Thirteen","Fourteen","Fifteen","Sixteen","Seventeen","Eighteen","Nineteen"];
   const t=["","","Twenty","Thirty","Forty","Fifty","Sixty","Seventy","Eighty","Ninety"];
@@ -433,8 +382,7 @@ function toWords(n){
   return toWords(Math.floor(n/10000000))+" Crore"+(n%10000000?" "+toWords(n%10000000):"");
 }
 
-// Display invoice on screen
-function buildInvoiceDisplay(b){
+function buildInvoice(b,targetId){
   const dateStr=new Date(b.bill_date).toLocaleDateString("en-IN");
   const custName=b.customer&&b.customer!=="Walk-in"?b.customer:(b.walkin_name||"Walk-in");
   const total=parseFloat(b.total||0);
@@ -452,7 +400,7 @@ function buildInvoiceDisplay(b){
       const qtyVal = parseInt(item.quantity||0);
       totalQty += qtyVal;
       rows += `<tr style="height:18px;">
-        <td style="text-align:left;border:1px solid #000;padding:2px 6px;font-size:11px;color:#6c757d;">${item.product||item.product_name||"-"}</td>
+        <td style="text-align:left;border:1px solid #000;padding:2px 6px;">${item.product||item.product_name||"-"}</td>
         <td style="text-align:center;border:1px solid #000;padding:2px 6px;">${qtyVal} Nos</td>
         <td style="text-align:right;border:1px solid #000;padding:2px 6px;">${parseFloat(item.rate||0).toFixed(2)}</td>
         <td style="text-align:right;border:1px solid #000;padding:2px 6px;">${parseFloat(item.total_amount||0).toFixed(2)}</td>
@@ -466,24 +414,21 @@ function buildInvoiceDisplay(b){
       </tr>`;
     }
   }
-  document.getElementById("invoiceArea").innerHTML=`
+  document.getElementById(targetId).innerHTML=`
     <div style="font-family:'Arial',sans-serif;padding:20px;border:1px solid #000;background:#fff;width:100%;max-width:550px;margin:auto;">
-      <div style="text-align:right;font-size:11px;font-weight:bold;">CELL: ${PHONE_NO}</div>
+      <div style="text-align:right;font-size:11px;font-weight:bold;">CELL: ${PHONE}</div>
       <div style="text-align:center;margin-bottom:12px;">
-        <div style="border:2px solid #000;padding:8px 16px;display:inline-block;margin-bottom:6px;">
-          <div style="font-family:'Cinzel Decorative', 'Montserrat', 'Playfair Display', serif;font-size:28px;font-weight:900;letter-spacing:3px;text-transform:uppercase;background:linear-gradient(45deg, #007bff, #00b4d8);-webkit-background-clip:text;-webkit-text-fill-color:transparent;text-shadow:2px 2px 4px rgba(0,0,0,0.15);padding:2px 0;">${SHOP}</div>
-          <div style="font-size:11px;font-weight:700;letter-spacing:2px;color:#6c757d;text-transform:uppercase;margin-top:2px;">PREMIUM SANITARYWARES &amp; TILES</div>
-        </div>
-        <div style="font-size:13px;font-weight:bold;letter-spacing:2px;margin-top:2px;color:#333;">Q BILL</div>
+        <div style="font-size:22px;font-weight:bold;letter-spacing:1px;">${SHOP}</div>
+        <div style="font-size:14px;font-weight:bold;margin-top:2px;">Q BILL</div>
       </div>
       
       <table style="width:100%;border-collapse:collapse;border:1px solid #000;margin-bottom:-1px;">
         <tr>
           <td style="width:55%;border:1px solid #000;padding:6px;vertical-align:top;text-align:left;">
-            <b>To:</b> <span style="color:#dc3545;font-weight:bold;">${custName}</span>
+            <b>To:</b> ${custName}
           </td>
           <td style="width:45%;border:1px solid #000;padding:6px;text-align:left;">
-            <div><b>Q Bill No :</b> <span style="color:#dc3545;font-weight:bold;">Q-${billNo}</span></div>
+            <div><b>Q Bill No :</b> Q-${billNo}</div>
             <div><b>Payment Terms :</b> ${b.payment_mode||"Cash"}</div>
             <div><b>Date :</b> ${dateStr}</div>
           </td>
@@ -514,13 +459,13 @@ function buildInvoiceDisplay(b){
           </tr>
           <tr>
             <td colspan="3" style="border:1px solid #000;padding:4px;text-align:right;font-weight:bold;font-size:14px;">Net Amount :</td>
-            <td style="border:1px solid #000;padding:4px;text-align:right;font-weight:bold;font-size:14px;color:#28a745;">₹${netAmount.toFixed(2)}</td>
+            <td style="border:1px solid #000;padding:4px;text-align:right;font-weight:bold;font-size:14px;">₹${netAmount.toFixed(2)}</td>
           </tr>
         </tfoot>
       </table>
       <table style="width:100%;border-collapse:collapse;border:1px solid #000;margin-top:-1px;">
         <tr>
-          <td style="border:1px solid #000;padding:8px;font-weight:bold;font-size:12px;text-align:left;vertical-align:top;color:#6c757d;">
+          <td style="border:1px solid #000;padding:8px;font-weight:bold;font-size:12px;text-align:left;vertical-align:top;">
             ${amtWords}
           </td>
           <td style="border:1px solid #000;padding:8px;text-align:right;width:180px;vertical-align:bottom;">
@@ -532,10 +477,9 @@ function buildInvoiceDisplay(b){
     </div>`;
 }
 
-// Print Bill
 function printBill(){
-  if(!createdBill){alert("No bill to print");return;}
-  const b=createdBill;
+  if(!currentBill){alert("No bill to print");return;}
+  const b=currentBill;
   const dateStr=new Date(b.bill_date).toLocaleDateString("en-IN");
   const custName=b.customer&&b.customer!=="Walk-in"?b.customer:(b.walkin_name||"Walk-in");
   const total=parseFloat(b.total||0);
@@ -552,7 +496,7 @@ function printBill(){
       const qtyVal = parseInt(item.quantity||0);
       totalQty += qtyVal;
       itemRows += `<tr>
-        <td style="text-align:left;font-size:11px;color:#6c757d;">${item.product||item.product_name||"-"}</td>
+        <td style="text-align:left;">${item.product||item.product_name||"-"}</td>
         <td style="text-align:center;">${qtyVal} Nos</td>
         <td style="text-align:right;">${parseFloat(item.rate||item.selling_price||0).toFixed(2)}</td>
         <td style="text-align:right;">${parseFloat(item.total_amount||0).toFixed(2)}</td>
@@ -562,40 +506,13 @@ function printBill(){
     }
   }
   const html=`<!DOCTYPE html><html><head><title>Q Bill</title>
-<link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=Montserrat:wght@800;900&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
 @page{size:A5 portrait;margin:5mm;}
 body{font-family:Arial,sans-serif;font-size:9pt;line-height:1.15;padding:2mm;background:#fff;}
 .top-header{text-align:right;font-size:8.5pt;font-weight:bold;margin-bottom:2px;}
-.shop-box{
-  border:1.5pt solid #000;
-  padding:4px 10px;
-  text-align:center;
-  display:inline-block;
-  margin-bottom:3px;
-}
-.header-container{
-  text-align:center;
-}
-.shop-title{
-  font-family:'Cinzel Decorative', 'Montserrat', serif;
-  font-size:18pt;
-  font-weight:900;
-  letter-spacing:3px;
-  text-transform:uppercase;
-  color:#007bff;
-  -webkit-text-stroke:0.5px #000;
-}
-.shop-subtitle{
-  font-size:8pt;
-  font-weight:bold;
-  letter-spacing:1.5px;
-  color:#555;
-  text-transform:uppercase;
-  margin-top:1px;
-}
-.bill-type{text-align:center;font-size:10pt;font-weight:bold;margin-top:2px;margin-bottom:4px;letter-spacing:1px;}
+.shop-title{text-align:center;font-size:16pt;font-weight:bold;letter-spacing:1px;}
+.bill-type{text-align:center;font-size:10pt;font-weight:bold;margin-bottom:4px;}
 table.main-tbl{width:100%;border-collapse:collapse;margin-top:0px;}
 table.main-tbl th, table.main-tbl td{border:1px solid #000;padding:2px 4px;}
 table.main-tbl th{font-size:8.5pt;font-weight:bold;text-align:center;}
@@ -604,23 +521,17 @@ table.main-tbl th{font-size:8.5pt;font-weight:bold;text-align:center;}
 .footer-tbl{width:100%;border-collapse:collapse;margin-top:-1px;}
 .footer-tbl td{border:1px solid #000;padding:4px 5px;}
 .sign-area{text-align:right;vertical-align:bottom;height:40px;}
-.highlight-red{color:#dc3545;font-weight:bold;}
 </style>
 </head>
 <body>
-  <div class="top-header">CELL: ${PHONE_NO}</div>
-  <div class="header-container">
-    <div class="shop-box">
-      <div class="shop-title">${SHOP}</div>
-      <div class="shop-subtitle">PREMIUM SANITARYWARES &amp; TILES</div>
-    </div>
-  </div>
+  <div class="top-header">CELL: ${PHONE}</div>
+  <div class="shop-title">${SHOP}</div>
   <div class="bill-type">Q BILL</div>
   <table class="meta-box">
     <tr>
-      <td style="width:55%;"><b>To :</b> <span class="highlight-red">${custName}</span></td>
+      <td style="width:55%;"><b>To :</b> ${custName}</td>
       <td style="width:45%;">
-        <b>Q Bill No :</b> <span class="highlight-red">Q-${billNo}</span><br>
+        <b>Q Bill No :</b> Q-${billNo}<br>
         <b>Payment Terms :</b> ${b.payment_mode||"Cash"}<br>
         <b>Date :</b> ${dateStr}
       </td>
@@ -649,13 +560,13 @@ table.main-tbl th{font-size:8.5pt;font-weight:bold;text-align:center;}
       </tr>
       <tr>
         <td colspan="3" style="text-align:right;font-weight:bold;font-size:9.5pt;">Net Amount :</td>
-        <td style="text-align:right;font-weight:bold;font-size:9.5pt;color:#28a745;">${netAmount.toFixed(2)}</td>
+        <td style="text-align:right;font-weight:bold;font-size:9.5pt;">${netAmount.toFixed(2)}</td>
       </tr>
     </tbody>
   </table>
   <table class="footer-tbl">
     <tr>
-      <td style="font-weight:bold;font-size:8.5pt;vertical-align:top;color:#6c757d;">
+      <td style="font-weight:bold;font-size:8.5pt;vertical-align:top;">
         ${amtWords}
       </td>
       <td class="sign-area" style="width:150px;">
@@ -672,7 +583,6 @@ table.main-tbl th{font-size:8.5pt;font-weight:bold;text-align:center;}
   setTimeout(()=>{win.print();win.close();},500);
 }
 
-// Share PDF
 async function sharePDF(){
   const btn=document.getElementById("sharePdfBtn");
   const orig=btn.innerText;btn.innerText="⏳...";btn.disabled=true;
@@ -682,19 +592,15 @@ async function sharePDF(){
     const pdf=new jsPDF({orientation:"portrait",unit:"mm",format:"a5"});
     const pw=pdf.internal.pageSize.getWidth()-10;
     pdf.addImage(canvas.toDataURL("image/png"),"PNG",5,5,pw,(canvas.height*pw)/canvas.width);
-    const fname="Q-Bill-"+(createdBill?(createdBill.bill_no||createdBill.bill_id):"bill")+".pdf";
-    if(navigator.share){
-      const blob=pdf.output("blob");
-      const file=new File([blob],fname,{type:"application/pdf"});
-      try{
-        await navigator.share({files:[file],title:"Q Bill",text:"Q Bill from "+SHOP});
-        btn.innerText=orig;btn.disabled=false;
-        return;
-      }catch(ex){}
-    }
+    const fname="Q-Bill-"+(currentBill?(currentBill.bill_no||currentBill.bill_id):"bill")+".pdf";
+    if(navigator.share){const blob=pdf.output("blob");const file=new File([blob],fname,{type:"application/pdf"});try{await navigator.share({files:[file],title:"Q Bill",text:"Q Bill from "+SHOP});btn.innerText=orig;btn.disabled=false;return;}catch(ex){}}
     pdf.save(fname);
   }catch(e){alert("PDF error: "+e.message);}
   btn.innerText=orig;btn.disabled=false;
+}
+
+function newBill(){
+  location.reload();
 }
 </script>
 </body>
