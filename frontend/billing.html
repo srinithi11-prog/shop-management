@@ -52,7 +52,7 @@
     .cust-drop-item{padding:8px 12px;cursor:pointer;border-bottom:1px solid #f0f0f0;font-size:13px;}
     .cust-drop-item:hover,.cust-drop-item.dp-active{background:#e8f0ff;}
 
-    /* UPDATED STYLING FOR SHOP TITLE & SUBTITLE */
+    /* SHOP TITLE & SUBTITLE STYLES */
     .shop-title-styled {
       font-family: 'Cinzel Decorative', 'Playfair Display', 'Montserrat', serif;
       font-size: 24px;
@@ -75,6 +75,17 @@
       color: #8B4513; /* Brown Color */
     }
 
+    /* COLOR CLASSES */
+    .grey-text {
+      color: #555555 !important;
+      font-weight: normal !important;
+    }
+    
+    .green-net-amount {
+      color: #28a745 !important;
+      font-weight: bold !important;
+    }
+
     @media print {
       .shop-title-styled {
         color: #00C8FF !important;
@@ -82,6 +93,12 @@
       }
       .shop-subtitle-styled {
         color: #8B4513 !important;
+      }
+      .grey-text {
+        color: #555555 !important;
+      }
+      .green-net-amount {
+        color: #28a745 !important;
       }
     }
   </style>
@@ -414,12 +431,12 @@ function buildInvoice(b, targetId) {
       const item = items[i];
       const qtyVal = parseInt(item.quantity || 0);
       totalQty += qtyVal;
-      /* PRODUCT NAME UNBOLDED & GREY COLOR */
+      /* PRODUCT NAME, QTY, RATE & AMOUNT ALL IN GREY (#555555) */
       rows += `<tr style="height:22px;">
         <td style="text-align:left;border:1px solid #000;padding:3px 6px;font-size:12px;color:#555;font-weight:normal;text-transform:uppercase;">${item.product || item.product_name || "-"}</td>
-        <td style="text-align:center;border:1px solid #000;padding:3px 6px;font-size:12px;font-weight:bold;white-space:nowrap;">${qtyVal} Nos</td>
-        <td style="text-align:right;border:1px solid #000;padding:3px 6px;font-size:12px;font-weight:bold;">${parseFloat(item.rate || 0).toFixed(2)}</td>
-        <td style="text-align:right;border:1px solid #000;padding:3px 6px;font-size:12px;font-weight:bold;">${parseFloat(item.total_amount || 0).toFixed(2)}</td>
+        <td style="text-align:center;border:1px solid #000;padding:3px 6px;font-size:12px;color:#555;font-weight:normal;white-space:nowrap;">${qtyVal} Nos</td>
+        <td style="text-align:right;border:1px solid #000;padding:3px 6px;font-size:12px;color:#555;font-weight:normal;">${parseFloat(item.rate || 0).toFixed(2)}</td>
+        <td style="text-align:right;border:1px solid #000;padding:3px 6px;font-size:12px;color:#555;font-weight:normal;">${parseFloat(item.total_amount || 0).toFixed(2)}</td>
       </tr>`;
     } else {
       rows += `<tr style="height:22px;">
@@ -471,25 +488,26 @@ function buildInvoice(b, targetId) {
         <tfoot>
           <tr>
             <td style="border:1px solid #000; padding:4px;"></td>
-            <td style="border:1px solid #000; padding:4px; text-align:center; font-weight:bold; font-size:13px;">${totalQty}.000</td>
+            <td style="border:1px solid #000; padding:4px; text-align:center; font-size:13px; color:#555; font-weight:normal;">${totalQty}.000</td>
             <td style="border:1px solid #000; padding:4px;"></td>
             <td style="border:1px solid #000; padding:4px;"></td>
           </tr>
           <tr>
             <td colspan="3" style="border:1px solid #000; padding:4px 8px; text-align:right; font-weight:bold; font-size:13px;">Rounded Off (Add) :</td>
-            <td style="border:1px solid #000; padding:4px 8px; text-align:right; font-size:13px; font-weight:bold;">${roundedAdd.toFixed(2)}</td>
+            <td style="border:1px solid #000; padding:4px 8px; text-align:right; font-size:13px; color:#555; font-weight:normal;">${roundedAdd.toFixed(2)}</td>
           </tr>
           <tr>
             <td colspan="3" style="border:1px solid #000; padding:4px 8px; text-align:right; font-weight:bold; font-size:14px;">Net Amount :</td>
-            <!-- FINAL AMOUNT IN GREEN COLOR -->
-            <td style="border:1px solid #000; padding:4px 8px; text-align:right; font-weight:bold; font-size:14px; color:#28a745;">${netAmount.toFixed(2)}</td>
+            <!-- FINAL NET AMOUNT IN GREEN -->
+            <td style="border:1px solid #000; padding:4px 8px; text-align:right; font-size:14px; color:#28a745; font-weight:bold;">${netAmount.toFixed(2)}</td>
           </tr>
         </tfoot>
       </table>
 
       <table style="width:100%; border-collapse:collapse; border:1px solid #000; margin-top:-1px; font-family:Arial, sans-serif;">
         <tr>
-          <td style="border:1px solid #000; padding:8px; font-weight:bold; font-size:12px; text-align:left; vertical-align:top;">
+          <!-- AMOUNT IN WORDS IN GREY -->
+          <td style="border:1px solid #000; padding:8px; font-size:12px; color:#555; font-weight:normal; text-align:left; vertical-align:top;">
             ${amtWords}
           </td>
           <td style="border:1px solid #000; padding:8px; text-align:center; width:200px; vertical-align:bottom;">
@@ -521,9 +539,9 @@ function printBill() {
       totalQty += qtyVal;
       itemRows += `<tr>
         <td style="text-align:left;color:#555;font-weight:normal;text-transform:uppercase;">${item.product || item.product_name || "-"}</td>
-        <td style="text-align:center;font-weight:bold;white-space:nowrap;">${qtyVal} Nos</td>
-        <td style="text-align:right;font-weight:bold;">${parseFloat(item.rate || item.selling_price || 0).toFixed(2)}</td>
-        <td style="text-align:right;font-weight:bold;">${parseFloat(item.total_amount || 0).toFixed(2)}</td>
+        <td style="text-align:center;color:#555;font-weight:normal;white-space:nowrap;">${qtyVal} Nos</td>
+        <td style="text-align:right;color:#555;font-weight:normal;">${parseFloat(item.rate || item.selling_price || 0).toFixed(2)}</td>
+        <td style="text-align:right;color:#555;font-weight:normal;">${parseFloat(item.total_amount || 0).toFixed(2)}</td>
       </tr>`;
     } else {
       itemRows += `<tr><td style="height:18px;">&nbsp;</td><td></td><td></td><td></td></tr>`;
@@ -552,6 +570,7 @@ table.main-tbl th{font-size:9.5pt;font-weight:bold;text-align:center;}
 .footer-tbl td{border:1px solid #000;padding:5px;}
 .sign-area{text-align:center;vertical-align:bottom;height:45px;}
 .red-txt{color:#b30000;font-weight:bold;}
+.grey-txt{color:#555555;font-weight:normal;}
 .green-txt{color:#28a745;font-weight:bold;}
 </style>
 </head>
@@ -589,16 +608,17 @@ table.main-tbl th{font-size:9.5pt;font-weight:bold;text-align:center;}
       ${itemRows}
       <tr>
         <td></td>
-        <td style="text-align:center;font-weight:bold;">${totalQty}.000</td>
+        <td style="text-align:center;" class="grey-txt">${totalQty}.000</td>
         <td></td>
         <td></td>
       </tr>
       <tr>
         <td colspan="3" style="text-align:right;font-weight:bold;">Rounded Off (Add) :</td>
-        <td style="text-align:right;font-weight:bold;">${roundedAdd.toFixed(2)}</td>
+        <td style="text-align:right;" class="grey-txt">${roundedAdd.toFixed(2)}</td>
       </tr>
       <tr>
         <td colspan="3" style="text-align:right;font-weight:bold;font-size:10pt;">Net Amount :</td>
+        <!-- NET AMOUNT IN GREEN FOR PRINT -->
         <td style="text-align:right;font-size:10pt;" class="green-txt">${netAmount.toFixed(2)}</td>
       </tr>
     </tbody>
@@ -606,7 +626,7 @@ table.main-tbl th{font-size:9.5pt;font-weight:bold;text-align:center;}
   
   <table class="footer-tbl">
     <tr>
-      <td style="font-weight:bold;font-size:9pt;vertical-align:top;">
+      <td style="font-size:9pt;vertical-align:top;" class="grey-txt">
         ${amtWords}
       </td>
       <td class="sign-area" style="width:180px;">
