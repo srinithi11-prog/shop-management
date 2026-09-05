@@ -52,7 +52,7 @@
     .cust-drop-item{padding:8px 12px;cursor:pointer;border-bottom:1px solid #f0f0f0;font-size:13px;}
     .cust-drop-item:hover,.cust-drop-item.dp-active{background:#e8f0ff;}
 
-    /* FIXED STYLING FOR GRADIENT TEXT */
+    /* UPDATED STYLING FOR SHOP TITLE & SUBTITLE */
     .shop-title-styled {
       font-family: 'Cinzel Decorative', 'Playfair Display', 'Montserrat', serif;
       font-size: 24px;
@@ -60,22 +60,28 @@
       text-transform: uppercase;
       letter-spacing: 2px;
       line-height: 1.1;
-      background: linear-gradient(135deg, #111111 0%, #333333 50%, #000000 100%);
-      -webkit-background-clip: text;
-      background-clip: text;
-      -webkit-text-fill-color: transparent;
-      color: transparent;
-      filter: drop-shadow(1px 2px 2px rgba(0,0,0,0.25));
+      color: #00C8FF; /* Aqua Blue Fill */
+      -webkit-text-stroke: 1px #000000; /* Black Outline */
+      text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
+    }
+
+    .shop-subtitle-styled {
+      font-size: 10px;
+      font-weight: bold;
+      font-family: 'Montserrat', Arial, sans-serif;
+      letter-spacing: 1.5px;
+      margin-top: 3px;
+      text-transform: uppercase;
+      color: #8B4513; /* Brown Color */
     }
 
     @media print {
       .shop-title-styled {
-        background: none !important;
-        -webkit-background-clip: initial !important;
-        background-clip: initial !important;
-        -webkit-text-fill-color: #000000 !important;
-        color: #000000 !important;
-        filter: none !important;
+        color: #00C8FF !important;
+        -webkit-text-stroke: 1px #000000 !important;
+      }
+      .shop-subtitle-styled {
+        color: #8B4513 !important;
       }
     }
   </style>
@@ -408,8 +414,9 @@ function buildInvoice(b, targetId) {
       const item = items[i];
       const qtyVal = parseInt(item.quantity || 0);
       totalQty += qtyVal;
+      /* PRODUCT NAME UNBOLDED & GREY COLOR */
       rows += `<tr style="height:22px;">
-        <td style="text-align:left;border:1px solid #000;padding:3px 6px;font-size:12px;font-weight:bold;text-transform:uppercase;">${item.product || item.product_name || "-"}</td>
+        <td style="text-align:left;border:1px solid #000;padding:3px 6px;font-size:12px;color:#555;font-weight:normal;text-transform:uppercase;">${item.product || item.product_name || "-"}</td>
         <td style="text-align:center;border:1px solid #000;padding:3px 6px;font-size:12px;font-weight:bold;white-space:nowrap;">${qtyVal} Nos</td>
         <td style="text-align:right;border:1px solid #000;padding:3px 6px;font-size:12px;font-weight:bold;">${parseFloat(item.rate || 0).toFixed(2)}</td>
         <td style="text-align:right;border:1px solid #000;padding:3px 6px;font-size:12px;font-weight:bold;">${parseFloat(item.total_amount || 0).toFixed(2)}</td>
@@ -431,7 +438,7 @@ function buildInvoice(b, targetId) {
       <div style="text-align:center; margin-bottom:8px;">
         <div style="display:inline-block; border:2px solid #000; padding:6px 20px; text-align:center;">
           <div class="shop-title-styled">${SHOP}</div>
-          <div style="font-size:10px; font-weight:bold; font-family:'Montserrat', Arial, sans-serif; letter-spacing:1.5px; margin-top:3px; text-transform:uppercase;">PREMIUM SANITARYWARES & TILES</div>
+          <div class="shop-subtitle-styled">PREMIUM SANITARYWARES & TILES</div>
         </div>
         <div style="font-size:15px; font-weight:bold; font-family:Arial, sans-serif; margin-top:6px;">Q BILL</div>
       </div>
@@ -474,7 +481,8 @@ function buildInvoice(b, targetId) {
           </tr>
           <tr>
             <td colspan="3" style="border:1px solid #000; padding:4px 8px; text-align:right; font-weight:bold; font-size:14px;">Net Amount :</td>
-            <td style="border:1px solid #000; padding:4px 8px; text-align:right; font-weight:bold; font-size:14px; color:#d4a017;">${netAmount.toFixed(2)}</td>
+            <!-- FINAL AMOUNT IN GREEN COLOR -->
+            <td style="border:1px solid #000; padding:4px 8px; text-align:right; font-weight:bold; font-size:14px; color:#28a745;">${netAmount.toFixed(2)}</td>
           </tr>
         </tfoot>
       </table>
@@ -512,7 +520,7 @@ function printBill() {
       const qtyVal = parseInt(item.quantity || 0);
       totalQty += qtyVal;
       itemRows += `<tr>
-        <td style="text-align:left;font-weight:bold;text-transform:uppercase;">${item.product || item.product_name || "-"}</td>
+        <td style="text-align:left;color:#555;font-weight:normal;text-transform:uppercase;">${item.product || item.product_name || "-"}</td>
         <td style="text-align:center;font-weight:bold;white-space:nowrap;">${qtyVal} Nos</td>
         <td style="text-align:right;font-weight:bold;">${parseFloat(item.rate || item.selling_price || 0).toFixed(2)}</td>
         <td style="text-align:right;font-weight:bold;">${parseFloat(item.total_amount || 0).toFixed(2)}</td>
@@ -532,8 +540,8 @@ function printBill() {
 body{font-family:Arial,sans-serif;font-size:9.5pt;line-height:1.2;padding:2mm;background:#fff;color:#000;}
 .top-header{text-align:right;font-size:9pt;font-weight:bold;margin-bottom:2px;}
 .header-box{display:inline-block;border:2px solid #000;padding:4px 15px;text-align:center;}
-.shop-title{font-family:'Cinzel Decorative', 'Playfair Display', 'Montserrat', serif;font-size:17pt;font-weight:900;letter-spacing:1.5px;line-height:1;text-transform:uppercase;color:#000000;}
-.shop-subtitle{font-family:'Montserrat', Arial, sans-serif;font-size:6.5pt;font-weight:bold;letter-spacing:1px;margin-top:2px;text-transform:uppercase;}
+.shop-title{font-family:'Cinzel Decorative', 'Playfair Display', 'Montserrat', serif;font-size:17pt;font-weight:900;letter-spacing:1.5px;line-height:1;text-transform:uppercase;color:#00C8FF;-webkit-text-stroke:1px #000;}
+.shop-subtitle{font-family:'Montserrat', Arial, sans-serif;font-size:6.5pt;font-weight:bold;letter-spacing:1px;margin-top:2px;text-transform:uppercase;color:#8B4513;}
 .bill-type{text-align:center;font-size:11pt;font-weight:bold;margin:4px 0;}
 table.main-tbl{width:100%;border-collapse:collapse;margin-top:0px;}
 table.main-tbl th, table.main-tbl td{border:1px solid #000;padding:3px 5px;}
@@ -544,7 +552,7 @@ table.main-tbl th{font-size:9.5pt;font-weight:bold;text-align:center;}
 .footer-tbl td{border:1px solid #000;padding:5px;}
 .sign-area{text-align:center;vertical-align:bottom;height:45px;}
 .red-txt{color:#b30000;font-weight:bold;}
-.gold-txt{color:#d4a017;font-weight:bold;}
+.green-txt{color:#28a745;font-weight:bold;}
 </style>
 </head>
 <body>
@@ -591,7 +599,7 @@ table.main-tbl th{font-size:9.5pt;font-weight:bold;text-align:center;}
       </tr>
       <tr>
         <td colspan="3" style="text-align:right;font-weight:bold;font-size:10pt;">Net Amount :</td>
-        <td style="text-align:right;font-size:10pt;" class="gold-txt">${netAmount.toFixed(2)}</td>
+        <td style="text-align:right;font-size:10pt;" class="green-txt">${netAmount.toFixed(2)}</td>
       </tr>
     </tbody>
   </table>
@@ -619,23 +627,6 @@ table.main-tbl th{font-size:9.5pt;font-weight:bold;text-align:center;}
 async function sharePDF(){
   const btn=document.getElementById("sharePdfBtn");
   const orig=btn.innerText;btn.innerText="⏳...";btn.disabled=true;
-  
-  const titleEl=document.querySelector("#invoiceArea .shop-title-styled");
-  const origBg=titleEl?titleEl.style.background:"";
-  const origClip=titleEl?titleEl.style.webkitBackgroundClip:"";
-  const origClipStd=titleEl?titleEl.style.backgroundClip:"";
-  const origFill=titleEl?titleEl.style.webkitTextFillColor:"";
-  const origColor=titleEl?titleEl.style.color:"";
-  const origFilter=titleEl?titleEl.style.filter:"";
-
-  if(titleEl){
-    titleEl.style.background="none";
-    titleEl.style.webkitBackgroundClip="initial";
-    titleEl.style.backgroundClip="initial";
-    titleEl.style.webkitTextFillColor="#000000";
-    titleEl.style.color="#000000";
-    titleEl.style.filter="none";
-  }
 
   try{
     const {jsPDF}=window.jspdf;
@@ -659,14 +650,6 @@ async function sharePDF(){
   }catch(e){
     alert("PDF error: "+e.message);
   }finally{
-    if(titleEl){
-      titleEl.style.background=origBg;
-      titleEl.style.webkitBackgroundClip=origClip;
-      titleEl.style.backgroundClip=origClipStd;
-      titleEl.style.webkitTextFillColor=origFill;
-      titleEl.style.color=origColor;
-      titleEl.style.filter=origFilter;
-    }
     btn.innerText=orig;
     btn.disabled=false;
   }
