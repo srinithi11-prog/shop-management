@@ -134,7 +134,7 @@ app.delete("/product/:id", (req, res) => {
       });
     }
   );
-}););
+});
 
 app.get("/stock-worth", (req, res) => {
   db.query("SELECT SUM(remaining_quantity * mrp) as worth FROM product_batches", (err, r) => {
