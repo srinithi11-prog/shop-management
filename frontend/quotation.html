@@ -56,28 +56,29 @@
     .modal{background:white;padding:22px;border-radius:10px;width:740px;max-width:98%;margin:auto;}
     .modal h3{color:#6f42c1;margin-bottom:14px;}
     
-    #printArea{font-family:'Courier New',monospace;padding:4px;background:white;}
-    .ih{text-align:center;margin-bottom:4px;}.ih h2{font-size:14pt;font-weight:bold;letter-spacing:1px;}.ih p{font-size:8pt;margin:1px 0;}
-    .iline{border-top:1.5px solid #333;margin:3px 0;}
-    .imeta{display:flex;justify-content:space-between;margin:4px 0;font-size:8pt;}
-    .itbl{width:100%;border-collapse:collapse;margin:4px 0;font-size:8pt;}.itbl th,.itbl td{border:1px solid #333;padding:3px 5px;}.itbl th{text-align:center;font-weight:bold;}
-    .ifooter{font-size:8pt;margin-top:3px;}.isign{text-align:right;margin-top:10px;font-size:8pt;}
+    #printArea{font-family:Arial, sans-serif;padding:0;background:white;}
+    .print-container{border:2px solid #000;padding:4px;height:198mm;display:flex;flex-direction:column;justify-content:space-between;box-sizing:border-box;}
+    .ih{text-align:center;border:1.5px solid #000;padding:4px 2px;margin-bottom:4px;background:#f9f9f9;}
+    .ih h2{font-size:13pt;font-weight:bold;letter-spacing:1px;text-transform:uppercase;}
+    .ih .sub-heading{font-size:7.5pt;font-weight:bold;letter-spacing:0.5px;color:#333;margin-top:1px;margin-bottom:2px;}
+    .ih p{font-size:7.5pt;margin:1px 0;}
+    .imeta{display:flex;justify-content:space-between;border:1px solid #000;padding:4px;margin-bottom:4px;font-size:7.5pt;}
+    .itbl{width:100%;border-collapse:collapse;font-size:7.5pt;flex-grow:1;}
+    .itbl th, .itbl td{border:1px solid #000;padding:2px 3px;height:7mm;box-sizing:border-box;}
+    .itbl th{text-align:center;font-weight:bold;background:#eee;}
+    .ifooter{font-size:7.5pt;border:1px solid #000;margin-top:4px;padding:3px;}
+    .isign{text-align:right;margin-top:6px;font-size:7.5pt;padding-right:8px;}
     
     /* Print styles for Half A4 (A5 Portrait) */
     .print-only { display: none; }
     
     @media print {
-  @page { size: 148mm 210mm; margin: 5mm; }
-  body { 
-    margin: 0; 
-    padding: 0; 
-    -webkit-print-color-adjust: exact; 
-    print-color-adjust: exact; 
-  }
-  body * { visibility: hidden; }
-  #printArea { visibility: visible; position: absolute; top:0; left:0; width:138mm; font-size:8.5pt; line-height:1.2; }
-  #printArea * { visibility: visible; }
-}
+      @page { size: 148mm 210mm; margin: 5mm; }
+      body { margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      body * { visibility: hidden; }
+      #printArea { visibility: visible; position: absolute; top:0; left:0; width:138mm; height:200mm; font-size:7.5pt; line-height:1.15; }
+      #printArea * { visibility: visible; }
+    }
   </style>
 </head>
 <body>
@@ -220,6 +221,7 @@
 <script>
 const API = "http://localhost:3000";
 const SHOP = "SUN CERAMIC";
+const SUB_HEADING = "PREMIUM SANITARYWARES & TILES";
 const PHONE = "9942607766";
 if(!sessionStorage.getItem("loggedIn")) window.location.href = "login.html";
 let rowCount=0, alterRowCount=0;
@@ -534,43 +536,52 @@ function buildPrintArea(q){
       <td style="text-align:right;">${parseFloat(item.total_amount).toFixed(2)}</td>
     </tr>`;
   });
-  for(let i=q.items.length;i<4;i++) rows+=`<tr><td style="height:14px;">&nbsp;</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>`;
+  for(let i=q.items.length;i<20;i++) rows+=`<tr><td>&nbsp;</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>`;
   document.getElementById("printArea").innerHTML=`
-    <div class="ih"><h2>${SHOP}</h2><p>CELL: ${PHONE}</p><p style="font-weight:bold;margin-top:3px;font-size:10pt;">QUOTATION</p></div>
-    <div class="iline"></div>
-    <div class="imeta">
-      <div><b>${custName}</b>${phone?"<br>"+phone:""}</div>
-      <div style="text-align:right;"><b>Date : ${dateStr}</b><br><b>Quot No : Q-${q.quot_id}</b></div>
-    </div>
-    <div class="iline"></div>
-    <table class="itbl">
-      <thead><tr>
-        <th style="width:30px;">S.No</th>
-        <th style="text-align:left;">Description</th>
-        <th style="width:35px;">Qty</th>
-        <th style="width:60px;text-align:right;">Rate</th>
-        <th style="width:40px;">Disc%</th>
-        <th style="width:55px;text-align:right;">Disc ₹</th>
-        <th style="width:65px;text-align:right;">Amount</th>
-      </tr></thead>
-      <tbody>${rows}</tbody>
-      <tfoot>
-        <tr>
-          <td colspan="2" style="font-weight:bold;text-align:left;">Total</td>
-          <td style="text-align:center;font-weight:bold;">${totalQty}</td>
-          <td></td>
-          <td></td>
-          <td style="text-align:right;font-weight:bold;">${discTotal.toFixed(2)}</td>
-          <td style="text-align:right;font-weight:bold;">${total.toFixed(2)}</td>
-        </tr>
-      </tfoot>
-    </table>
-    <div class="ifooter">
-      <div style="display:flex;justify-content:space-between;padding:2px 0;"><span>E. &amp; O.E.</span><span>${total.toFixed(2)}</span></div>
-      <div class="iline" style="border-color:#555;"></div>
-      <div style="display:flex;justify-content:space-between;padding:2px 0;"><span><i>${amtWords}</i></span><span><b>Net Amount : ${total.toFixed(2)}</b></span></div>
-    </div>
-    <div class="isign"><p>For ${SHOP}</p><br><br><p>Authorised Signatory</p></div>`;
+    <div class="print-container">
+      <div>
+        <div class="ih">
+          <h2>${SHOP}</h2>
+          <div class="sub-heading">${SUB_HEADING}</div>
+          <p>CELL: ${PHONE}</p>
+          <p style="font-weight:bold;margin-top:2px;font-size:8pt;border-top:1px solid #000;padding-top:2px;">QUOTATION</p>
+        </div>
+        <div class="imeta">
+          <div><b>Customer: ${custName}</b>${phone?"<br>Phone: "+phone:""}</div>
+          <div style="text-align:right;"><b>Date : ${dateStr}</b><br><b>Quot No : Q-${q.quot_id}</b></div>
+        </div>
+        <table class="itbl">
+          <thead><tr>
+            <th style="width:25px;">S.No</th>
+            <th style="text-align:left;">Description</th>
+            <th style="width:30px;">Qty</th>
+            <th style="width:50px;text-align:right;">Rate</th>
+            <th style="width:35px;">Disc%</th>
+            <th style="width:50px;text-align:right;">Disc ₹</th>
+            <th style="width:60px;text-align:right;">Amount</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+          <tfoot>
+            <tr>
+              <td colspan="2" style="font-weight:bold;text-align:left;">Total</td>
+              <td style="text-align:center;font-weight:bold;">${totalQty}</td>
+              <td></td>
+              <td></td>
+              <td style="text-align:right;font-weight:bold;">${discTotal.toFixed(2)}</td>
+              <td style="text-align:right;font-weight:bold;">${total.toFixed(2)}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+      <div>
+        <div class="ifooter">
+          <div style="display:flex;justify-content:space-between;padding:1px 0;"><span>E. &amp; O.E.</span><span>${total.toFixed(2)}</span></div>
+          <div style="border-top:1px solid #000;margin:2px 0;"></div>
+          <div style="display:flex;justify-content:space-between;padding:1px 0;"><span><i>${amtWords}</i></span><span><b>Net Amount : ₹${total.toFixed(2)}</b></span></div>
+        </div>
+        <div class="isign"><p>For <b>${SHOP}</b></p><br><br><p>Authorised Signatory</p></div>
+      </div>
+    </div>`;
   document.getElementById("printArea").style.display="none";
 }
 function printQuot(){
@@ -613,8 +624,8 @@ function printQuot(){
       <td style="text-align:right;">${parseFloat(item.total_amount).toFixed(2)}</td>
     </tr>`;
   });
-  for (let i = q.items.length; i < 4; i++) {
-    itemRows += `<tr><td style="height:14px;">&nbsp;</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>`;
+  for (let i = q.items.length; i < 20; i++) {
+    itemRows += `<tr><td>&nbsp;</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>`;
   }
   const html = `<!DOCTYPE html>
 <html>
@@ -622,70 +633,84 @@ function printQuot(){
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     @page { size: 148mm 210mm; margin: 5mm; }
-    body { font-family: 'Courier New', monospace; font-size: 8.5pt; line-height: 1.2; background: white; }
-    .ih { text-align: center; margin-bottom: 4px; }
-    .ih h2 { font-size: 13pt; font-weight: bold; letter-spacing: 1px; }
-    .ih p { font-size: 8pt; margin: 1px 0; }
-    .iline { border-top: 1.5px solid #333; margin: 3px 0; }
-    .imeta { display: flex; justify-content: space-between; margin: 4px 0; font-size: 8pt; }
-    .itbl { width: 100%; border-collapse: collapse; margin: 4px 0; font-size: 8pt; }
-    .itbl th, .itbl td { border: 1px solid #333; padding: 3px 4px; }
-    .itbl th { text-align: center; font-weight: bold; }
-    .ifooter { font-size: 8pt; margin-top: 4px; }
-    .isign { text-align: right; margin-top: 16px; font-size: 8pt; }
+    body { font-family: Arial, sans-serif; font-size: 7.5pt; line-height: 1.15; background: white; }
+    .print-container {
+      border: 2px solid #000;
+      padding: 4px;
+      height: 198mm;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      box-sizing: border-box;
+    }
+    .ih { text-align: center; border: 1.5px solid #000; padding: 4px 2px; margin-bottom: 4px; background: #f9f9f9; }
+    .ih h2 { font-size: 13pt; font-weight: bold; letter-spacing: 1px; text-transform: uppercase; }
+    .ih .sub-heading { font-size: 7.5pt; font-weight: bold; letter-spacing: 0.5px; color: #333; margin-top: 1px; margin-bottom: 2px; }
+    .ih p { font-size: 7.5pt; margin: 1px 0; }
+    .imeta { display: flex; justify-content: space-between; border: 1px solid #000; padding: 4px; margin-bottom: 4px; font-size: 7.5pt; }
+    .itbl { width: 100%; border-collapse: collapse; font-size: 7.5pt; flex-grow: 1; }
+    .itbl th, .itbl td { border: 1px solid #000; padding: 2px 3px; height: 6.8mm; box-sizing: border-box; }
+    .itbl th { text-align: center; font-weight: bold; background: #eee; }
+    .ifooter { font-size: 7.5pt; border: 1px solid #000; margin-top: 4px; padding: 3px; }
+    .isign { text-align: right; margin-top: 6px; font-size: 7.5pt; padding-right: 8px; }
   </style>
 </head>
 <body>
-  <div class="ih">
-    <h2>${SHOP}</h2>
-    <p>CELL: ${PHONE}</p>
-    <p style="font-weight:bold; margin-top:3px; font-size:9pt;">QUOTATION</p>
-  </div>
-  <div class="iline"></div>
-  <div class="imeta">
-    <div><b>${custName}</b>${phone ? "<br>" + phone : ""}</div>
-    <div style="text-align:right;"><b>Date : ${dateStr}</b><br><b>Quot No : Q-${q.quot_id}</b></div>
-  </div>
-  <div class="iline"></div>
-  <table class="itbl">
-    <thead>
-      <tr>
-        <th style="width:28px;">S.No</th>
-        <th style="text-align:left;">Description</th>
-        <th style="width:32px;">Qty</th>
-        <th style="width:55px; text-align:right;">Rate</th>
-        <th style="width:35px;">Disc%</th>
-        <th style="width:50px; text-align:right;">Disc ₹</th>
-        <th style="width:60px; text-align:right;">Amount</th>
-      </tr>
-    </thead>
-    <tbody>${itemRows}</tbody>
-    <tfoot>
-      <tr>
-        <td colspan="2" style="font-weight:bold; text-align:left;">Total</td>
-        <td style="text-align:center; font-weight:bold;">${totalQty}</td>
-        <td></td>
-        <td></td>
-        <td style="text-align:right; font-weight:bold;">${discTotal.toFixed(2)}</td>
-        <td style="text-align:right; font-weight:bold;">${total.toFixed(2)}</td>
-      </tr>
-    </tfoot>
-  </table>
-  <div class="ifooter">
-    <div style="display:flex; justify-content:space-between; padding:2px 0;">
-      <span>E. &amp; O.E.</span>
-      <span>${total.toFixed(2)}</span>
+  <div class="print-container">
+    <div>
+      <div class="ih">
+        <h2>${SHOP}</h2>
+        <div class="sub-heading">${SUB_HEADING}</div>
+        <p>CELL: ${PHONE}</p>
+        <p style="font-weight:bold; margin-top:2px; font-size:8pt; border-top:1px solid #000; padding-top:2px;">QUOTATION</p>
+      </div>
+      <div class="imeta">
+        <div><b>Customer: ${custName}</b>${phone ? "<br>Phone: " + phone : ""}</div>
+        <div style="text-align:right;"><b>Date : ${dateStr}</b><br><b>Quot No : Q-${q.quot_id}</b></div>
+      </div>
+      <table class="itbl">
+        <thead>
+          <tr>
+            <th style="width:25px;">S.No</th>
+            <th style="text-align:left;">Description</th>
+            <th style="width:30px;">Qty</th>
+            <th style="width:50px; text-align:right;">Rate</th>
+            <th style="width:35px;">Disc%</th>
+            <th style="width:50px; text-align:right;">Disc ₹</th>
+            <th style="width:60px; text-align:right;">Amount</th>
+          </tr>
+        </thead>
+        <tbody>${itemRows}</tbody>
+        <tfoot>
+          <tr>
+            <td colspan="2" style="font-weight:bold; text-align:left;">Total</td>
+            <td style="text-align:center; font-weight:bold;">${totalQty}</td>
+            <td></td>
+            <td></td>
+            <td style="text-align:right; font-weight:bold;">${discTotal.toFixed(2)}</td>
+            <td style="text-align:right; font-weight:bold;">${total.toFixed(2)}</td>
+          </tr>
+        </tfoot>
+      </table>
     </div>
-    <div class="iline" style="border-color:#555;"></div>
-    <div style="display:flex; justify-content:space-between; padding:2px 0;">
-      <span><i>${amtWords}</i></span>
-      <span><b>Net Amount : ${total.toFixed(2)}</b></span>
+    <div>
+      <div class="ifooter">
+        <div style="display:flex; justify-content:space-between; padding:1px 0;">
+          <span>E. &amp; O.E.</span>
+          <span>${total.toFixed(2)}</span>
+        </div>
+        <div style="border-top:1px solid #000; margin:2px 0;"></div>
+        <div style="display:flex; justify-content:space-between; padding:1px 0;">
+          <span><i>${amtWords}</i></span>
+          <span><b>Net Amount : ₹${total.toFixed(2)}</b></span>
+        </div>
+      </div>
+      <div class="isign">
+        <p>For <b>${SHOP}</b></p>
+        <br><br>
+        <p>Authorised Signatory</p>
+      </div>
     </div>
-  </div>
-  <div class="isign">
-    <p>For ${SHOP}</p>
-    <br><br>
-    <p>Authorised Signatory</p>
   </div>
 </body>
 </html>`;
