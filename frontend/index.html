@@ -126,7 +126,7 @@
 </div>
 
 <script>
-const API = `${window.location.protocol}//${window.location.hostname}:3000`;
+const API = "http://localhost:3000";
 if(!sessionStorage.getItem("loggedIn")) window.location.href = "login.html";
 
 document.getElementById("userLabel").innerText = "👤 " + (sessionStorage.getItem("username")||"");
@@ -212,7 +212,7 @@ function loadProfitData(){
 function askProfitPassword(){
   const pwd=prompt("Enter profit password:");
   if(pwd===null)return;
-  if(pwd==="1234"){revealProfit();}
+  if(pwd==="3363"){revealProfit();}
   else{alert("❌ Incorrect password");}
 }
 
