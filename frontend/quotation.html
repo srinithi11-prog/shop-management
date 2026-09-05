@@ -63,16 +63,21 @@
     .itbl{width:100%;border-collapse:collapse;margin:4px 0;font-size:8pt;}.itbl th,.itbl td{border:1px solid #333;padding:3px 5px;}.itbl th{text-align:center;font-weight:bold;}
     .ifooter{font-size:8pt;margin-top:3px;}.isign{text-align:right;margin-top:10px;font-size:8pt;}
     
-    /* Print styles */
+    /* Print styles for Half A4 (A5 Portrait) */
     .print-only { display: none; }
     
     @media print {
-      @page { size: 148mm 105mm; margin: 3mm 4mm; }
-      body { margin: 0; padding: 0; }
-      body * { visibility: hidden; }
-      #printArea { visibility: visible; position: fixed; top:0; left:0; width:140mm; font-size:8pt; line-height:1.3; }
-      #printArea * { visibility: visible; }
-    }
+  @page { size: 148mm 210mm; margin: 5mm; }
+  body { 
+    margin: 0; 
+    padding: 0; 
+    -webkit-print-color-adjust: exact; 
+    print-color-adjust: exact; 
+  }
+  body * { visibility: hidden; }
+  #printArea { visibility: visible; position: absolute; top:0; left:0; width:138mm; font-size:8.5pt; line-height:1.2; }
+  #printArea * { visibility: visible; }
+}
   </style>
 </head>
 <body>
@@ -222,7 +227,6 @@ let allProducts=[], allCustomers=[];
 let activeInput=null, activeRowId=null, activeContext="create";
 let currentQuot=null, deletedQiIds=[];
 let dropIdx=-1, custIdx=-1;
-
 window.addEventListener("DOMContentLoaded", ()=>{
   document.getElementById("quotDate").value = new Date().toISOString().split("T")[0];
   document.getElementById("convDate").value = new Date().toISOString().split("T")[0];
@@ -236,7 +240,6 @@ window.addEventListener("DOMContentLoaded", ()=>{
     if(pd&&!pd.contains(e.target)&&e.target!==activeInput) hideDrop();
   });
 });
-
 // ── CUSTOMER SEARCH ────────────────────────────────────
 function searchCustomers(){
   const q=document.getElementById("custSearch").value.trim().toLowerCase();
@@ -278,7 +281,6 @@ function clearCustomer(){
   document.getElementById("clearCustBtn").style.display="none";
   document.getElementById("walkinBox").style.display="block";
 }
-
 // ── PRODUCT DROPDOWN ───────────────────────────────────
 function showDrop(inputEl, rowId, fieldType, context){
   activeInput=inputEl; activeRowId=rowId; activeContext=context||"create"; dropIdx=-1;
@@ -343,7 +345,6 @@ function loadBatches(selId, pid){
   });
 }
 function esc(s){return (s||"").replace(/'/g,"\\'").replace(/"/g,'\\"');}
-
 // ── CREATE ROWS ────────────────────────────────────────
 function addRow(){
   rowCount++;
@@ -442,7 +443,6 @@ function saveQuotation(){
     loadAllQuotations();
   }).catch(err=>alert("Error: "+err.message));
 }
-
 // ── HISTORY ───────────────────────────────────────────
 function loadAllQuotations(){fetchQuotations("");}
 function searchQuotations(){fetchQuotations(document.getElementById("searchName").value.trim());}
@@ -467,7 +467,6 @@ function fetchQuotations(name){
     });
   });
 }
-
 // ── VIEW QUOTATION ─────────────────────────────────────
 function viewQuot(quot_id){
   fetch(API+"/quotation/"+quot_id).then(r=>r.json()).then(q=>{
@@ -502,7 +501,6 @@ function viewQuot(quot_id){
     document.getElementById("detailModal").classList.add("show");
   });
 }
-
 // ── PRINT AREA ─────────────────────────────────────────
 function buildPrintArea(q){
   const dateStr=new Date(q.quot_date).toLocaleDateString("en-IN");
@@ -572,10 +570,9 @@ function buildPrintArea(q){
       <div class="iline" style="border-color:#555;"></div>
       <div style="display:flex;justify-content:space-between;padding:2px 0;"><span><i>${amtWords}</i></span><span><b>Net Amount : ${total.toFixed(2)}</b></span></div>
     </div>
-    <div class="isign"><p>For ${SHOP}</p><br><p>Authorised Signatory</p></div>`;
+    <div class="isign"><p>For ${SHOP}</p><br><br><p>Authorised Signatory</p></div>`;
   document.getElementById("printArea").style.display="none";
 }
-
 function printQuot(){
   if (!currentQuot) { alert("No quotation selected"); return; }
   
@@ -585,7 +582,6 @@ function printQuot(){
   const phone = q.display_phone || "";
   const total = parseFloat(q.net_amount || 0);
   const discTotal = parseFloat(q.discount_total || 0);
-
   function toWords(n) {
     const a = ["", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen", "Seventeen", "Eighteen", "Nineteen"];
     const t = ["", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"];
@@ -598,11 +594,9 @@ function printQuot(){
     if (n < 10000000) return toWords(Math.floor(n / 100000)) + " Lakh" + (n % 100000 ? " " + toWords(n % 100000) : "");
     return toWords(Math.floor(n / 10000000)) + " Crore" + (n % 10000000 ? " " + toWords(n % 10000000) : "");
   }
-
   const amtWords = toWords(Math.round(total)) + " Rupees Only";
   let itemRows = "";
   let totalQty = 0;
-
   q.items.forEach((item, i) => {
     totalQty += parseInt(item.quantity);
     const gross = parseFloat(item.rate) * parseInt(item.quantity);
@@ -619,35 +613,33 @@ function printQuot(){
       <td style="text-align:right;">${parseFloat(item.total_amount).toFixed(2)}</td>
     </tr>`;
   });
-
   for (let i = q.items.length; i < 4; i++) {
     itemRows += `<tr><td style="height:14px;">&nbsp;</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>`;
   }
-
   const html = `<!DOCTYPE html>
 <html>
 <head>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    @page { size: 148mm 105mm; margin: 3mm 4mm; }
-    body { font-family: 'Courier New', monospace; font-size: 8pt; line-height: 1.3; background: white; }
+    @page { size: 148mm 210mm; margin: 5mm; }
+    body { font-family: 'Courier New', monospace; font-size: 8.5pt; line-height: 1.2; background: white; }
     .ih { text-align: center; margin-bottom: 4px; }
-    .ih h2 { font-size: 14pt; font-weight: bold; letter-spacing: 1px; }
+    .ih h2 { font-size: 13pt; font-weight: bold; letter-spacing: 1px; }
     .ih p { font-size: 8pt; margin: 1px 0; }
     .iline { border-top: 1.5px solid #333; margin: 3px 0; }
     .imeta { display: flex; justify-content: space-between; margin: 4px 0; font-size: 8pt; }
     .itbl { width: 100%; border-collapse: collapse; margin: 4px 0; font-size: 8pt; }
-    .itbl th, .itbl td { border: 1px solid #333; padding: 3px 5px; }
+    .itbl th, .itbl td { border: 1px solid #333; padding: 3px 4px; }
     .itbl th { text-align: center; font-weight: bold; }
-    .ifooter { font-size: 8pt; margin-top: 3px; }
-    .isign { text-align: right; margin-top: 10px; font-size: 8pt; }
+    .ifooter { font-size: 8pt; margin-top: 4px; }
+    .isign { text-align: right; margin-top: 16px; font-size: 8pt; }
   </style>
 </head>
 <body>
   <div class="ih">
     <h2>${SHOP}</h2>
     <p>CELL: ${PHONE}</p>
-    <p style="font-weight:bold; margin-top:3px; font-size:10pt;">QUOTATION</p>
+    <p style="font-weight:bold; margin-top:3px; font-size:9pt;">QUOTATION</p>
   </div>
   <div class="iline"></div>
   <div class="imeta">
@@ -658,13 +650,13 @@ function printQuot(){
   <table class="itbl">
     <thead>
       <tr>
-        <th style="width:30px;">S.No</th>
+        <th style="width:28px;">S.No</th>
         <th style="text-align:left;">Description</th>
-        <th style="width:35px;">Qty</th>
-        <th style="width:60px; text-align:right;">Rate</th>
-        <th style="width:40px;">Disc%</th>
-        <th style="width:55px; text-align:right;">Disc ₹</th>
-        <th style="width:65px; text-align:right;">Amount</th>
+        <th style="width:32px;">Qty</th>
+        <th style="width:55px; text-align:right;">Rate</th>
+        <th style="width:35px;">Disc%</th>
+        <th style="width:50px; text-align:right;">Disc ₹</th>
+        <th style="width:60px; text-align:right;">Amount</th>
       </tr>
     </thead>
     <tbody>${itemRows}</tbody>
@@ -692,19 +684,17 @@ function printQuot(){
   </div>
   <div class="isign">
     <p>For ${SHOP}</p>
-    <br>
+    <br><br>
     <p>Authorised Signatory</p>
   </div>
 </body>
 </html>`;
-
   const win = window.open('', '_blank', 'width=600,height=800');
   win.document.write(html);
   win.document.close();
   win.focus();
   setTimeout(() => { win.print(); win.close(); }, 500);
 }
-
 async function sharePDF(){
   const btn=document.getElementById("sharePdfBtn");
   const orig=btn.innerText; btn.innerText="⏳..."; btn.disabled=true;
@@ -726,7 +716,6 @@ async function sharePDF(){
   }catch(e){document.getElementById("printArea").style.display="none";alert("PDF error: "+e.message);}
   btn.innerText=orig; btn.disabled=false;
 }
-
 // ── ALTER QUOTATION ────────────────────────────────────
 function buildAlterRows(q){
   document.getElementById("alterBody").innerHTML="";
@@ -804,7 +793,6 @@ function saveAlter(){
     loadAllQuotations();
   });
 }
-
 // ── CONVERT ────────────────────────────────────────────
 function buildConvertRows(q){
   const tbody=document.getElementById("convBody");
@@ -853,7 +841,6 @@ function confirmConvert(){
   });
 }
 function closeModal(){document.getElementById("detailModal").classList.remove("show");currentQuot=null;deletedQiIds=[];}
-
 // ── KEYBOARD NAV ───────────────────────────────────────
 document.addEventListener("keydown", e=>{
   if(e.key==="Escape"){
