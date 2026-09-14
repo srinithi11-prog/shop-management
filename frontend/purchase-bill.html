@@ -337,10 +337,12 @@ function showProdDrop(inputEl, rowId, fieldType){
   const q=inputEl.value.trim().toLowerCase();
   const drop=document.getElementById("prodDrop");
   if(q.length<1){drop.classList.remove("open");return;}
-  const matches=(fieldType==="code"
-    ?allProducts.filter(p=>(p.product_code||"").toLowerCase().includes(q))
-    :allProducts.filter(p=>p.name.toLowerCase().includes(q))
-  ).slice(0,10);
+  // Search by name, code AND brand — works in both fields
+  const matches = allProducts.filter(p =>
+    (p.name||"").toLowerCase().includes(q) ||
+    (p.product_code||"").toLowerCase().includes(q) ||
+    (p.brand||"").toLowerCase().includes(q)
+  ).slice(0,20);
   if(!matches.length){drop.classList.remove("open");return;}
   drop.innerHTML=matches.map(p=>`
     <div class="prod-drop-item" onmousedown="pickProduct(event,${p.product_id},'${esc(p.name)}','${esc(p.product_code||"")}')">
@@ -371,6 +373,14 @@ function handleProdKey(e, rowId, fieldType){
 }
 
 function esc(s){return (s||"").replace(/'/g,"\\'").replace(/"/g,'\\"');}
+
+function pickProductFromEl(e, el){
+  e.preventDefault();
+  const pid=el.dataset.pid;
+  const name=el.dataset.name;
+  const code=el.dataset.code;
+  pickProduct(e,pid,name,code);
+}
 
 function pickProduct(e, pid, name, code){
   e.preventDefault();

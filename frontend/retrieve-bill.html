@@ -533,10 +533,19 @@ function showProdDrop(inputEl,rowId,fieldType){
   const q=inputEl.value.trim().toLowerCase();
   const drop=document.getElementById("prodDrop");
   if(q.length<1){hideProdDrop();return;}
-  const matches=(fieldType==="code"?allProducts.filter(p=>(p.product_code||"").toLowerCase().includes(q)):allProducts.filter(p=>p.name.toLowerCase().includes(q))).slice(0,10);
+  // Search by name, code AND brand — works in both fields
+  const matches = allProducts.filter(p =>
+    (p.name||"").toLowerCase().includes(q) ||
+    (p.product_code||"").toLowerCase().includes(q) ||
+    (p.brand||"").toLowerCase().includes(q)
+  ).slice(0,20);
   if(!matches.length){hideProdDrop();return;}
   drop.innerHTML=matches.map((p,i)=>`
-    <div class="prod-drop-item" id="pdrop_${i}" onmousedown="pickAlterProduct(event,${p.product_id},'${esc(p.name)}','${esc(p.product_code||"")}')">
+    <div class="prod-drop-item" id="pdrop_${i}"
+      data-pid="${p.product_id}"
+      data-name="${(p.name||'').replace(/"/g,'&quot;')}"
+      data-code="${(p.product_code||'').replace(/"/g,'&quot;')}"
+      onmousedown="pickAlterProductFromEl(event,this)">
       <div class="pdi-code">${p.product_code||"(no code)"}</div>
       <div class="pdi-name">${p.name}${p.brand?" — "+p.brand:""}</div>
     </div>`).join("");
@@ -552,6 +561,14 @@ function handleAlterKey(e,rowId,fieldType){
   if(e.key==="Enter"){if(isOpen&&dropIdx>=0&&items[dropIdx]){e.preventDefault();items[dropIdx].dispatchEvent(new MouseEvent("mousedown",{bubbles:true}));return;}if(isOpen&&items.length===1){e.preventDefault();items[0].dispatchEvent(new MouseEvent("mousedown",{bubbles:true}));return;}e.preventDefault();const q=document.getElementById("arqty_"+rowId);if(q)q.focus();return;}
   if(e.key==="Escape")hideProdDrop();if(e.key==="Tab")hideProdDrop();
 }
+function pickAlterProductFromEl(e, el){
+  e.preventDefault();
+  const pid = el.dataset.pid;
+  const name = el.dataset.name;
+  const code = el.dataset.code;
+  pickAlterProduct(e, pid, name, code);
+}
+
 function pickAlterProduct(e,pid,name,code){
   e.preventDefault();const id=activeAlterRow;
   document.getElementById("arcode_"+id).value=code;
