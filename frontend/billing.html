@@ -310,10 +310,20 @@ function showProdDrop(inputEl,rowId,fieldType,ctx){
   const q=inputEl.value.trim().toLowerCase();
   const drop=document.getElementById("prodDrop");
   if(q.length<1){hideProdDrop();return;}
-  const matches=(fieldType==="code"?allProducts.filter(p=>(p.product_code||"").toLowerCase().includes(q)):allProducts.filter(p=>p.name.toLowerCase().includes(q))).slice(0,10);
+  // Search by name, code AND brand — works in both fields
+  const matches = allProducts.filter(p =>
+    (p.name||"").toLowerCase().includes(q) ||
+    (p.product_code||"").toLowerCase().includes(q) ||
+    (p.brand||"").toLowerCase().includes(q)
+  ).slice(0,20);
   if(!matches.length){hideProdDrop();return;}
   drop.innerHTML=matches.map((p,i)=>`
-    <div class="prod-drop-item" id="pdrop_${i}" onmousedown="pickProduct(event,${p.product_id},'${esc(p.name)}','${esc(p.product_code||"")}','${ctx}')">
+    <div class="prod-drop-item" id="pdrop_${i}"
+      data-pid="${p.product_id}"
+      data-name="${(p.name||'').replace(/"/g,'&quot;')}"
+      data-code="${(p.product_code||'').replace(/"/g,'&quot;')}"
+      data-ctx="${ctx}"
+      onmousedown="pickProductFromEl(event,this)">
       <div class="pdi-code">${p.product_code||"(no code)"}</div>
       <div class="pdi-name">${p.name}${p.brand?" — "+p.brand:""}</div>
     </div>`).join("");
@@ -329,6 +339,15 @@ function handleProdKey(e,rowId,fieldType,ctx){
   if(e.key==="Enter"){if(isOpen&&dropIdx>=0&&items[dropIdx]){e.preventDefault();items[dropIdx].dispatchEvent(new MouseEvent("mousedown",{bubbles:true}));return;}if(isOpen&&items.length===1){e.preventDefault();items[0].dispatchEvent(new MouseEvent("mousedown",{bubbles:true}));return;}e.preventDefault();const qEl=document.getElementById((ctx==="alter"?"ar":"")+"qty_"+rowId);if(qEl)qEl.focus();return;}
   if(e.key==="Escape")hideProdDrop();if(e.key==="Tab")hideProdDrop();
 }
+function pickProductFromEl(e, el){
+  e.preventDefault();
+  const pid = el.dataset.pid;
+  const name = el.dataset.name;
+  const code = el.dataset.code;
+  const ctx = el.dataset.ctx;
+  pickProduct(e, pid, name, code, ctx);
+}
+
 function pickProduct(e,pid,name,code,ctx){
   e.preventDefault();const id=activeRow||0;
   if(ctx==="alter"){document.getElementById("arcode_"+id).value=code;document.getElementById("arname_"+id).value=name;document.getElementById("arpid_"+id).value=pid;document.getElementById("artag_"+id).innerText="✅ "+name;hideProdDrop();loadBatches("arbatch_"+id,pid);}

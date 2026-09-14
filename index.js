@@ -134,7 +134,7 @@ app.delete("/product/:id", (req, res) => {
       });
     }
   );
-});
+}););
 
 app.get("/stock-worth", (req, res) => {
   db.query("SELECT SUM(remaining_quantity * mrp) as worth FROM product_batches", (err, r) => {
@@ -1010,9 +1010,10 @@ app.post("/convert-quotation/:id", (req, res) => {
             if (item.batch_id) {
               db.query("SELECT * FROM product_batches WHERE batch_id=?", [item.batch_id], (e3, batches) => {
                 if (batches && batches.length) {
-                  const newQty = batches[0].remaining_quantity - item.quantity;
-                  if (newQty <= 0) db.query("DELETE FROM product_batches WHERE batch_id=?", [item.batch_id]);
-                  else db.query("UPDATE product_batches SET remaining_quantity=? WHERE batch_id=?", [newQty, item.batch_id]);
+                  db.query(
+                    "UPDATE product_batches SET remaining_quantity = GREATEST(0, remaining_quantity - ?) WHERE batch_id=?",
+                    [item.quantity, item.batch_id]
+                  );
                 }
               });
             }
@@ -1024,8 +1025,12 @@ app.post("/convert-quotation/:id", (req, res) => {
                   if (payment_mode === "CREDIT" && quot.customer_id) {
                     db.query("UPDATE customers SET balance = balance + ? WHERE customer_id=?", [grand_total, quot.customer_id]);
                   }
-                  db.query("UPDATE quotations SET status='CONVERTED', converted_bill_id=? WHERE quot_id=?", [bill_id, quot_id]);
-                  res.json({ success: true, bill_id, total: grand_total });
+                  // Delete quotation items and quotation after conversion
+                  db.query("DELETE FROM quotation_items WHERE quot_id=?", [quot_id], () => {
+                    db.query("DELETE FROM quotations WHERE quot_id=?", [quot_id], () => {
+                      res.json({ success: true, bill_id, total: grand_total });
+                    });
+                  });
                 }
               }
             );
@@ -1609,6 +1614,19 @@ app.get("/bill-stats", (req, res) => {
   `, [today, today], (err, r) => {
     if (err) return res.json({ total_bills:0, today_bills:0, today_sales:0, last_bill_id:null });
     res.json(r[0]);
+  });
+});
+
+
+// Delete quotation
+app.delete("/quotation/:id", (req, res) => {
+  const qid = req.params.id;
+  db.query("DELETE FROM quotation_items WHERE quot_id=?", [qid], (err1) => {
+    if (err1) return res.status(500).json({ error: err1.message });
+    db.query("DELETE FROM quotations WHERE quot_id=?", [qid], (err2) => {
+      if (err2) return res.status(500).json({ error: err2.message });
+      res.json({ success: true });
+    });
   });
 });
 
