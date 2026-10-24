@@ -330,6 +330,10 @@ function handleDropKey(e, rowId, fieldType, context){
   if(e.key==="Escape"){hideDrop();}
   if(e.key==="Tab"){hideDrop();}
 }
+// FIX: this function was missing — dropdown items call it on click/Enter
+function pickProductFromEl(e, el){
+  pickProduct(e, el.dataset.pid, el.dataset.name, el.dataset.code);
+}
 function pickProduct(e, pid, name, code){
   e.preventDefault();
   const id=activeRowId; const ctx=activeContext;
