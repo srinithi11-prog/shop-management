@@ -76,6 +76,19 @@
     .nav a { position: relative; }
     .key-hint { position:absolute;top:-6px;right:-4px;background:#ff9800;color:white;font-size:9px;padding:1px 4px;border-radius:3px;font-weight:bold; }
 
+  
+    .alter-tbl{width:100%;border-collapse:collapse;margin-top:6px;}
+    .alter-tbl th{background:#fd7e14;color:#fff;padding:6px;font-size:12px;text-align:center;}
+    .alter-tbl td{padding:3px;border:1px solid #eee;text-align:center;font-size:12px;vertical-align:middle;}
+    .alter-tbl td input{padding:5px;font-size:12px;border:1px solid #ccc;border-radius:4px;width:100%;}
+    .alter-tbl td input[readonly]{background:#f1f1f1;color:#777;}
+    .alter-drop{position:fixed;background:#fff;border:1px solid #aaa;border-radius:6px;max-height:220px;overflow-y:auto;z-index:99999;box-shadow:0 6px 20px rgba(0,0,0,.2);display:none;min-width:240px;}
+    .alter-drop.open{display:block;}
+    .alt-item{padding:9px 12px;cursor:pointer;border-bottom:1px solid #f0f0f0;}
+    .alt-item:hover,.alt-item.dp-active{background:#e8f7ef;}
+    .alt-item .c{font-size:11px;color:#1a6e30;font-weight:bold;font-family:monospace;}
+    .alt-item .n{font-size:13px;color:#222;}
+    .sold-note{font-size:10px;color:#b45309;font-weight:bold;}
   </style>
 </head>
 <body>
@@ -144,6 +157,7 @@
             <th style="width:58px;">Qty</th>
             <th style="width:80px;">Purchase ₹</th>
             <th style="width:80px;">Selling ₹</th>
+            <th style="width:80px;">Wholesale ₹</th>
             <th style="width:60px;">Min Stock</th>
             <th style="width:85px;">Total ₹</th>
             <th style="width:36px;">✕</th>
@@ -190,6 +204,29 @@
   <div class="modal">
     <h3 id="modalTitle">Purchase Bill</h3>
     <div id="modalContent"></div>
+    <div id="billActions" style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">
+      <button onclick="showAlterSection()" style="background:#fd7e14;">✏️ Alter Bill</button>
+      <button class="danger" onclick="deleteBill()">🗑 Delete Bill</button>
+    </div>
+    <div id="alterSection" style="display:none;margin-top:14px;border-top:2px solid #eee;padding-top:12px;">
+      <h4 style="color:#fd7e14;margin-bottom:8px;">✏️ Alter Purchase Bill</h4>
+      <div class="row">
+        <div class="f"><label>Bill Date</label><input type="date" id="alterDate"></div>
+        <div class="f" style="flex:1;"><label>Note</label><input id="alterNote" placeholder="Optional"></div>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="alter-tbl">
+          <thead><tr><th>#</th><th style="width:90px;">Code</th><th style="width:150px;">Name</th><th style="width:70px;">Qty</th><th style="width:80px;">Purchase ₹</th><th style="width:80px;">Selling ₹</th><th style="width:80px;">Wholesale ₹</th><th style="width:55px;">Min</th><th style="width:85px;">Total ₹</th><th style="width:34px;">✕</th></tr></thead>
+          <tbody id="alterBody"></tbody>
+        </table>
+      </div>
+      <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;">
+        <button onclick="addAlterRow()" style="background:#fd7e14;">➕ Add Item</button>
+        <button class="success" onclick="saveAlterBill()">💾 Save Changes</button>
+        <button onclick="hideAlterSection()" style="background:#888;">Cancel</button>
+      </div>
+      <div id="alterSummary" style="margin-top:8px;font-size:14px;font-weight:bold;text-align:right;"></div>
+    </div>
     <div style="background:#f0fff4;border:1px solid #28a745;border-radius:8px;padding:14px;margin-top:14px;" id="paySection">
       <h4 style="color:#1a6e30;margin-bottom:10px;">💳 Record Payment to Supplier</h4>
       <div class="row">
@@ -207,6 +244,7 @@
 
 <!-- Product search dropdown portal -->
 <div class="prod-drop" id="prodDrop"></div>
+<div class="alter-drop" id="alterDrop"></div>
 
 <script>
 const API = "http://localhost:3000";
@@ -221,6 +259,10 @@ let activeInput = null;
 let activeRow = null;
 let dropIdx = -1;
 let suppIdx = -1;
+let alterRowCount = 0;
+let currentBillData = null;
+let origBillDate = "";
+let alterIdx = -1;
 
 window.addEventListener("DOMContentLoaded", ()=>{
   document.getElementById("billDate").value = new Date().toISOString().split("T")[0];
@@ -345,7 +387,11 @@ function showProdDrop(inputEl, rowId, fieldType){
   ).slice(0,20);
   if(!matches.length){drop.classList.remove("open");return;}
   drop.innerHTML=matches.map(p=>`
-    <div class="prod-drop-item" onmousedown="pickProduct(event,${p.product_id},'${esc(p.name)}','${esc(p.product_code||"")}')">
+    <div class="prod-drop-item"
+      data-pid="${p.product_id}"
+      data-name="${(p.name||'').replace(/"/g,'&quot;')}"
+      data-code="${(p.product_code||'').replace(/"/g,'&quot;')}"
+      onmousedown="pickProductFromEl(event,this)">
       <div class="pdi-code">${p.product_code||"(no code)"}</div>
       <div class="pdi-name">${p.name}${p.brand?" — "+p.brand:""}</div>
     </div>`).join("");
@@ -424,7 +470,8 @@ function addItemRow(){
     </td>
     <td><input type="number" id="pqty_${id}" value="1" min="1" style="width:55px;" oninput="recalcRow(${id})" onkeydown="if(event.key==='Enter'){event.preventDefault();document.getElementById('ppp_'+${id}).focus();}"></td>
     <td><input type="number" id="ppp_${id}" placeholder="0.00" oninput="recalcRow(${id})" onkeydown="if(event.key==='Enter'){event.preventDefault();document.getElementById('psp_'+${id}).focus();}"></td>
-    <td><input type="number" id="psp_${id}" placeholder="0.00" onkeydown="if(event.key==='Enter'){event.preventDefault();addItemRow();}"></td>
+    <td><input type="number" id="psp_${id}" placeholder="0.00" onkeydown="if(event.key==='Enter'){event.preventDefault();document.getElementById('pwp_'+${id}).focus();}"></td>
+    <td><input type="number" id="pwp_${id}" placeholder="optional" onkeydown="if(event.key==='Enter'){event.preventDefault();addItemRow();}"></td>
     <td><input type="number" id="pms_${id}" value="5" style="width:50px;"></td>
     <td><input type="number" id="ptotal_${id}" placeholder="0.00" readonly style="background:#f8f9fa;"></td>
     <td><button class="danger" onclick="removeRow(${id})" style="padding:3px 7px;font-size:11px;">✕</button></td>
@@ -477,48 +524,57 @@ async function submitPurchaseBill(){
   if(!supplier_id){ alert("Select a supplier"); return; }
   if(!bill_date){ alert("Select bill date"); return; }
 
-  const items=[];
+  // Pass 1: validate every row BEFORE creating any product
+  const rows=[];
   for(let i=1;i<=rowCount;i++){
-    const el=document.getElementById("row_"+i); if(!el) continue;
+    if(!document.getElementById("row_"+i)) continue;
     const qty=parseInt(document.getElementById("pqty_"+i).value)||0;
     const pp=parseFloat(document.getElementById("ppp_"+i).value)||0;
     const sp=parseFloat(document.getElementById("psp_"+i).value)||0;
+    const wp=parseFloat(document.getElementById("pwp_"+i).value)||0;
     const ms=parseInt(document.getElementById("pms_"+i).value)||5;
     const isNew=document.getElementById("isNew_"+i).value==="1";
+    const pid=document.getElementById("ppid_"+i).value;
+    const mainName=document.getElementById("pname_"+i).value.trim();
+    const newName=document.getElementById("newName_"+i).value.trim()||mainName;
+    if(!pid && !isNew && !mainName && pp===0) continue; // skip untouched blank row
+    if(!isNew && !pid){ alert("Product not found for row "+i+". Please search and select a product."); return; }
+    if(isNew && !newName){ alert("Enter product name for new product in row "+i); return; }
     if(qty<=0){ alert("Enter quantity for row "+i); return; }
     if(pp<=0){ alert("Enter purchase price for row "+i); return; }
     if(sp<=0){ alert("Enter selling price for row "+i); return; }
+    rows.push({i,qty,pp,sp,wp,ms,isNew,pid,newName});
+  }
+  if(!rows.length){ alert("Add at least one item"); return; }
 
-    let product_id=document.getElementById("ppid_"+i).value;
-
-    if(isNew){
-      const newName=document.getElementById("newName_"+i).value.trim();
-      const newBrand=document.getElementById("newBrand_"+i).value.trim();
-      const newHsn=document.getElementById("newHsn_"+i).value.trim();
-      const code=document.getElementById("pcode_"+i).value.trim();
-      if(!newName){ alert("Enter product name for new product in row "+i); return; }
+  // Pass 2: create new products (only now that everything is valid)
+  const items=[];
+  for(const r of rows){
+    let product_id=r.pid;
+    if(r.isNew){
+      const newBrand=document.getElementById("newBrand_"+r.i).value.trim();
+      const newHsn=document.getElementById("newHsn_"+r.i).value.trim();
+      const code=document.getElementById("pcode_"+r.i).value.trim();
       try{
         const resp=await fetch(API+"/products",{method:"POST",headers:{"Content-Type":"application/json"},
-          body:JSON.stringify({name:newName,brand:newBrand,hsn_code:newHsn,product_code:code})});
+          body:JSON.stringify({name:r.newName,brand:newBrand,hsn_code:newHsn,product_code:code,wholesale_price:r.wp>0?r.wp:null})});
         const d=await resp.json();
-        if(d.error){ alert("Error creating product: "+d.error); return; }
+        if(d.error){ alert("Error creating product in row "+r.i+": "+d.error); return; }
         product_id=d.product_id;
-        allProducts.push({product_id,name:newName,brand:newBrand,product_code:code});
+        document.getElementById("ppid_"+r.i).value=product_id;
+        document.getElementById("isNew_"+r.i).value="0";
       }catch(e){ alert("Network error: "+e.message); return; }
     }
-
-    if(!product_id){ alert("Product not found for row "+i+". Please search and select a product."); return; }
-    items.push({product_id,quantity:qty,purchase_price:pp,selling_price:sp,min_stock:ms});
+    items.push({product_id,quantity:r.qty,purchase_price:r.pp,selling_price:r.sp,wholesale_price:r.wp>0?r.wp:null,min_stock:r.ms});
   }
-
-  if(!items.length){ alert("Add at least one item"); return; }
 
   fetch(API+"/create-purchase-bill",{method:"POST",headers:{"Content-Type":"application/json"},
     body:JSON.stringify({supplier_id,bill_date,payment_mode,items,note,initial_payment:parseFloat(initial_payment)||null})})
   .then(r=>r.json())
   .then(d=>{
     if(d.error){ alert("Error: "+d.error); return; }
-    alert(`✅ Purchase bill saved!\nTotal: ₹${d.total_amount.toFixed(2)}\nPaid: ₹${d.paid_amount.toFixed(2)}\nBalance: ₹${d.balance.toFixed(2)}`);
+    fetch(API+"/products").then(r=>r.json()).then(p=>{allProducts=p;}).catch(()=>{});
+    alert(`✅ Purchase bill saved! Stock added for ${d.items_added} item(s).\nTotal: ₹${d.total_amount.toFixed(2)}\nPaid: ₹${d.paid_amount.toFixed(2)}\nBalance: ₹${d.balance.toFixed(2)}`);
     // Reset form
     document.getElementById("itemsBody").innerHTML="";
     clearSupplier();
@@ -558,15 +614,17 @@ function loadHistory(){
         <td>₹${parseFloat(b.total_amount).toFixed(2)}</td>
         <td style="color:#28a745;">₹${parseFloat(b.paid_amount).toFixed(2)}</td>
         <td>${bal>0?`<span class="badge-due">₹${bal.toFixed(2)}</span>`:"✅ Paid"}</td>
-        <td><button class="blue" onclick="viewBill(${b.pb_id},${b.supplier_id||0})" style="padding:4px 10px;font-size:12px;">View</button></td>
+        <td style="white-space:nowrap;"><button class="blue" onclick="viewBill(${b.pb_id},${b.supplier_id||0})" style="padding:4px 10px;font-size:12px;">View</button>
+          <button onclick="viewBill(${b.pb_id},${b.supplier_id||0},true)" style="padding:4px 10px;font-size:12px;background:#fd7e14;margin-left:4px;">✏️ Alter</button></td>
       </tr>`;
     });
   });
 }
 
-function viewBill(pb_id, supplier_id){
+function viewBill(pb_id, supplier_id, openAlter){
   currentPbId=pb_id; currentSupplierId=supplier_id;
   fetch(API+"/purchase-bill/"+pb_id).then(r=>r.json()).then(b=>{
+    currentBillData=b; buildAlterRows(b); hideAlterSection(); if(openAlter) showAlterSection();
     document.getElementById("modalTitle").innerText="PB-"+b.pb_id+" — "+(b.supplier_name||"Supplier");
     const bal=parseFloat(b.balance)||0;
     const itemRows=b.items.map((item,i)=>`<tr>
@@ -629,6 +687,197 @@ function submitPayment(){
     loadSuppliers(); loadHistory();
     viewBill(currentPbId,currentSupplierId);
   });
+}
+
+// ── ALTER / DELETE PURCHASE BILL ───────────────────────
+function escAttr(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;"); }
+
+function localDateStr(d){
+  const x=new Date(d);
+  return x.getFullYear()+"-"+String(x.getMonth()+1).padStart(2,"0")+"-"+String(x.getDate()).padStart(2,"0");
+}
+
+function buildAlterRows(b){
+  document.getElementById("alterBody").innerHTML="";
+  alterRowCount=0;
+  origBillDate=localDateStr(b.bill_date);
+  document.getElementById("alterDate").value=origBillDate;
+  document.getElementById("alterNote").value=b.note||"";
+  (b.items||[]).forEach(it=>addAlterRow(it));
+  calcAlterTotal();
+}
+
+function addAlterRow(item){
+  item=item||{};
+  alterRowCount++;
+  const id=alterRowCount;
+  const sold=parseInt(item.sold_qty)||0;
+  const locked=sold>0;
+  const ro=locked?"readonly":"";
+  const tr=document.createElement("tr");
+  tr.id="arow_"+id;
+  tr.innerHTML=`
+    <td>${id}</td>
+    <td><input id="arcode_${id}" value="${escAttr(item.product_code)}" placeholder="Code" ${ro}
+      oninput="showAlterDrop(this,${id})" onfocus="showAlterDrop(this,${id})" onkeydown="handleAlterKey(event,${id})" autocomplete="off"></td>
+    <td><input id="arname_${id}" value="${escAttr(item.product_name)}" placeholder="Name" ${ro}
+      oninput="showAlterDrop(this,${id})" onfocus="showAlterDrop(this,${id})" onkeydown="handleAlterKey(event,${id})" autocomplete="off">
+      <div class="selected-tag" id="artag_${id}">${item.product_name?"✅ "+escAttr(item.product_name):""}</div>
+      <input type="hidden" id="arpid_${id}" value="${item.product_id||""}">
+      <input type="hidden" id="arpbi_${id}" value="${item.pbi_id!=null?item.pbi_id:"new"}"></td>
+    <td><input type="number" id="arqty_${id}" value="${item.quantity||1}" min="${locked?sold:1}" oninput="calcAlterRow(${id})"
+      onkeydown="if(event.key==='Enter'){event.preventDefault();document.getElementById('arpp_${id}').focus();}">
+      ${locked?`<div class="sold-note">Sold ${sold}</div>`:""}</td>
+    <td><input type="number" id="arpp_${id}" value="${item.purchase_price!=null?parseFloat(item.purchase_price):""}" oninput="calcAlterRow(${id})"
+      onkeydown="if(event.key==='Enter'){event.preventDefault();document.getElementById('arsp_${id}').focus();}"></td>
+    <td><input type="number" id="arsp_${id}" value="${item.selling_price!=null?parseFloat(item.selling_price):""}"
+      onkeydown="if(event.key==='Enter'){event.preventDefault();document.getElementById('arwp_${id}').focus();}"></td>
+    <td><input type="number" id="arwp_${id}" value="${item.wholesale_price!=null?parseFloat(item.wholesale_price):""}" placeholder="optional"
+      onkeydown="if(event.key==='Enter'){event.preventDefault();addAlterRow();}"></td>
+    <td><input type="number" id="arms_${id}" value="${item.min_stock||5}"></td>
+    <td><input type="number" id="artotal_${id}" readonly></td>
+    <td><button class="danger" ${locked?"disabled title=\"Stock already sold - can't remove\"":""} onclick="removeAlterRow(${id})" style="padding:3px 7px;font-size:11px;">✕</button></td>`;
+  document.getElementById("alterBody").appendChild(tr);
+  calcAlterRow(id);
+}
+
+function calcAlterRow(id){
+  const q=parseFloat(document.getElementById("arqty_"+id).value)||0;
+  const p=parseFloat(document.getElementById("arpp_"+id).value)||0;
+  document.getElementById("artotal_"+id).value=(q*p).toFixed(2);
+  calcAlterTotal();
+}
+
+function removeAlterRow(id){
+  const el=document.getElementById("arow_"+id); if(el) el.remove();
+  calcAlterTotal();
+}
+
+function calcAlterTotal(){
+  let t=0;
+  for(let i=1;i<=alterRowCount;i++){
+    const el=document.getElementById("artotal_"+i);
+    if(el) t+=parseFloat(el.value)||0;
+  }
+  const s=document.getElementById("alterSummary");
+  if(!s||!currentBillData) return;
+  const b=currentBillData;
+  let extra="";
+  if(b.payment_mode==="CREDIT"){
+    const paid=parseFloat(b.paid_amount)||0;
+    extra=` &nbsp;|&nbsp; Paid: ₹${paid.toFixed(2)} &nbsp;|&nbsp; Balance due: <span style="color:${t-paid>0?"#dc3545":"#28a745"};">₹${(t-paid).toFixed(2)}</span>`;
+  } else {
+    extra=` &nbsp;|&nbsp; <span style="font-weight:normal;color:#666;">(${b.payment_mode} bill: paid amount follows the new total)</span>`;
+  }
+  s.innerHTML=`New total: ₹${t.toFixed(2)}${extra}`;
+}
+
+function showAlterSection(){
+  document.getElementById("alterSection").style.display="block";
+  calcAlterTotal();
+  document.getElementById("alterSection").scrollIntoView({behavior:"smooth",block:"nearest"});
+}
+function hideAlterSection(){
+  const s=document.getElementById("alterSection"); if(s) s.style.display="none";
+  hideAlterDrop();
+}
+
+function showAlterDrop(inputEl,rowId){
+  if(inputEl.readOnly) return;
+  activeInput=inputEl; activeRow=rowId; alterIdx=-1;
+  const q=inputEl.value.trim().toLowerCase();
+  const drop=document.getElementById("alterDrop");
+  if(q.length<1){ hideAlterDrop(); return; }
+  const matches=allProducts.filter(p=>
+    (p.name||"").toLowerCase().includes(q)||
+    (p.product_code||"").toLowerCase().includes(q)||
+    (p.brand||"").toLowerCase().includes(q)).slice(0,20);
+  if(!matches.length){ hideAlterDrop(); return; }
+  drop.innerHTML=matches.map(p=>`<div class="alt-item"
+      data-pid="${p.product_id}" data-name="${escAttr(p.name)}" data-code="${escAttr(p.product_code||"")}"
+      onmousedown="pickAlterFromEl(event,this)">
+      <div class="c">${escAttr(p.product_code||"(no code)")}</div>
+      <div class="n">${escAttr(p.name)}${p.brand?" — "+escAttr(p.brand):""}</div></div>`).join("");
+  const rect=inputEl.getBoundingClientRect();
+  drop.style.top=(rect.bottom+2)+"px";
+  drop.style.left=rect.left+"px";
+  drop.style.width=Math.max(rect.width,240)+"px";
+  drop.classList.add("open");
+}
+function hideAlterDrop(){
+  const d=document.getElementById("alterDrop");
+  if(d) d.classList.remove("open");
+  alterIdx=-1;
+}
+function handleAlterKey(e,rowId){
+  const drop=document.getElementById("alterDrop");
+  const open=drop.classList.contains("open");
+  const items=drop.querySelectorAll(".alt-item");
+  const mark=()=>{ items.forEach((el,i)=>el.classList.toggle("dp-active",i===alterIdx)); if(items[alterIdx]) items[alterIdx].scrollIntoView({block:"nearest"}); };
+  if(e.key==="ArrowDown"){ e.preventDefault(); if(!open) showAlterDrop(e.target,rowId); alterIdx=Math.min(alterIdx+1,items.length-1); mark(); return; }
+  if(e.key==="ArrowUp"){ e.preventDefault(); alterIdx=Math.max(alterIdx-1,0); mark(); return; }
+  if(e.key==="Enter"){
+    if(open&&alterIdx>=0&&items[alterIdx]){ e.preventDefault(); items[alterIdx].dispatchEvent(new MouseEvent("mousedown",{bubbles:true})); return; }
+    if(open&&items.length===1){ e.preventDefault(); items[0].dispatchEvent(new MouseEvent("mousedown",{bubbles:true})); return; }
+    e.preventDefault(); const q=document.getElementById("arqty_"+rowId); if(q) q.focus(); return;
+  }
+  if(e.key==="Escape"||e.key==="Tab") hideAlterDrop();
+}
+function pickAlterFromEl(e,el){
+  e.preventDefault();
+  const id=activeRow;
+  document.getElementById("arcode_"+id).value=el.dataset.code;
+  document.getElementById("arname_"+id).value=el.dataset.name;
+  document.getElementById("arpid_"+id).value=el.dataset.pid;
+  document.getElementById("artag_"+id).innerText="✅ "+el.dataset.name;
+  hideAlterDrop();
+  setTimeout(()=>{ const q=document.getElementById("arqty_"+id); if(q) q.focus(); },50);
+}
+document.addEventListener("mousedown",e=>{
+  const d=document.getElementById("alterDrop");
+  if(d && !d.contains(e.target) && !String(e.target.id||"").startsWith("ar")) hideAlterDrop();
+});
+
+function saveAlterBill(){
+  if(!currentBillData||!currentPbId) return;
+  const items=[];
+  for(let i=1;i<=alterRowCount;i++){
+    if(!document.getElementById("arow_"+i)) continue;
+    const pid=document.getElementById("arpid_"+i).value;
+    const qty=parseInt(document.getElementById("arqty_"+i).value)||0;
+    const pp=parseFloat(document.getElementById("arpp_"+i).value)||0;
+    const sp=parseFloat(document.getElementById("arsp_"+i).value)||0;
+    const wp=parseFloat(document.getElementById("arwp_"+i).value)||0;
+    const ms=parseInt(document.getElementById("arms_"+i).value)||5;
+    const pbi=document.getElementById("arpbi_"+i).value;
+    if(!pid){ alert("Row "+i+": search and select a product"); return; }
+    if(qty<=0){ alert("Row "+i+": enter a quantity"); return; }
+    if(pp<=0){ alert("Row "+i+": enter the purchase price"); return; }
+    if(sp<=0){ alert("Row "+i+": enter the selling price"); return; }
+    items.push({pbi_id:pbi==="new"?"new":parseInt(pbi),product_id:parseInt(pid),quantity:qty,purchase_price:pp,selling_price:sp,wholesale_price:wp>0?wp:null,min_stock:ms});
+  }
+  if(!items.length){ alert("A purchase bill needs at least one item. To remove the whole bill, use Delete Bill."); return; }
+  const body={items,note:document.getElementById("alterNote").value};
+  const nd=document.getElementById("alterDate").value;
+  if(nd && nd!==origBillDate) body.bill_date=nd;
+  fetch(API+"/purchase-bill/"+currentPbId,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)})
+  .then(r=>r.json()).then(d=>{
+    if(d.error){ alert("Error: "+d.error); return; }
+    alert(`✅ Purchase bill updated!\nNew total: ₹${d.total_amount.toFixed(2)}\nBalance due: ₹${d.balance.toFixed(2)}`);
+    loadHistory(); loadSuppliers();
+    viewBill(currentPbId,currentSupplierId);
+  }).catch(err=>alert("Network error: "+err.message));
+}
+
+function deleteBill(){
+  if(!currentPbId) return;
+  if(!confirm("Delete purchase bill PB-"+currentPbId+"?\n\nThe stock it added will be removed and the supplier balance reversed. This cannot be undone.")) return;
+  fetch(API+"/purchase-bill/"+currentPbId,{method:"DELETE"})
+  .then(r=>r.json()).then(d=>{
+    if(d.error){ alert("Error: "+d.error); return; }
+    alert("✅ Purchase bill deleted");
+    closeModal(); loadHistory(); loadSuppliers();
+  }).catch(err=>alert("Network error: "+err.message));
 }
 
 function closeModal(){

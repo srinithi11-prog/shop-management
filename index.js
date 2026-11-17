@@ -15,6 +15,13 @@ app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "frontend", "index.html"));
 });
 
+// If the one-time database upgrade could not run, say so clearly instead of failing quietly
+let SCHEMA_ERROR = null;
+app.use((req, res, next) => {
+  if (SCHEMA_ERROR) return res.status(503).json({ error: SCHEMA_ERROR });
+  next();
+});
+
 const db = mysql.createConnection({
   host: "localhost",
   user: "shopuser",
@@ -103,11 +110,13 @@ app.get("/product-by-code/:code", (req, res) => {
 });
 
 app.post("/products", (req, res) => {
-  const { name, hsn_code, brand, product_code } = req.body;
+  const { name, hsn_code, brand, product_code, wholesale_price } = req.body;
   if (!name) return res.status(400).json({ error: "Product name required" });
+  const wp = (wholesale_price === undefined || wholesale_price === null || wholesale_price === "") ? null : parseFloat(wholesale_price);
+  if (wp !== null && !(wp > 0)) return res.status(400).json({ error: "Wholesale price must be a positive number" });
   db.query(
-    "INSERT INTO products (name, hsn_code, brand, product_code) VALUES (?,?,?,?)",
-    [name, hsn_code || null, brand || null, product_code || null],
+    "INSERT INTO products (name, hsn_code, brand, product_code, wholesale_price) VALUES (?,?,?,?,?)",
+    [name, hsn_code || null, brand || null, product_code || null, wp],
     (err, r) => {
       if (err) return res.status(500).json({ error: err.message });
       res.json({ product_id: r.insertId });
@@ -146,8 +155,8 @@ app.get("/stock-worth", (req, res) => {
 // ================= BATCHES =================
 app.get("/batches/:product_id", (req, res) => {
   db.query(
-    "SELECT * FROM product_batches WHERE product_id=? AND remaining_quantity > 0 ORDER BY purchase_date ASC",
-    [req.params.product_id],
+    "SELECT * FROM product_batches WHERE product_id=? AND (remaining_quantity > 0 OR batch_id=?) ORDER BY purchase_date ASC",
+    [req.params.product_id, parseInt(req.query.include) || 0],
     (err, r) => {
       if (err) return res.json([]);
       res.json(r);
@@ -302,7 +311,8 @@ app.get("/credit-payments/:customer_id", (req, res) => {
 
 // ================= SALES BILLING =================
 app.post("/create-bill-multi", (req, res) => {
-  let { items, payment_mode, customer_id, walkin_name, walkin_phone, bill_date } = req.body;
+  let { items, payment_mode, customer_id, walkin_name, walkin_phone, bill_date, bill_type } = req.body;
+  const billType = String(bill_type || "").toUpperCase() === "WHOLESALE" ? "WHOLESALE" : "RETAIL";
   if (!items || !items.length) return res.status(400).json({ error: "No items" });
 
   const finalDate = bill_date || new Date().toISOString().split("T")[0];
@@ -314,8 +324,8 @@ app.post("/create-bill-multi", (req, res) => {
       const grand_total = items.reduce((s, i) => s + (parseFloat(i.total_amount) || 0), 0);
 
       db.query(
-        "INSERT INTO bills (bill_date, payment_mode, customer_id, fy_id, grand_total, cancelled) VALUES (?,?,?,?,?,0)",
-        [finalDate, payment_mode, cust_id || null, fy_id, grand_total],
+        "INSERT INTO bills (bill_date, payment_mode, customer_id, fy_id, grand_total, cancelled, bill_type) VALUES (?,?,?,?,?,0,?)",
+        [finalDate, payment_mode, cust_id || null, fy_id, grand_total, billType],
         (err, result) => {
           if (err) return res.status(500).json({ error: err.message });
           const bill_id = result.insertId;
@@ -393,7 +403,7 @@ app.post("/create-bill-multi", (req, res) => {
 
 app.get("/bill/:id", (req, res) => {
   db.query(`
-    SELECT b.bill_id, b.bill_date, b.payment_mode, b.cancelled, b.grand_total,
+    SELECT b.bill_id, b.bill_date, b.payment_mode, b.cancelled, b.grand_total, b.bill_type,
            COALESCE(c.name,'Walk-in') as customer_name, c.phone, c.address
     FROM bills b LEFT JOIN customers c ON b.customer_id=c.customer_id
     WHERE b.bill_id=?
@@ -402,7 +412,7 @@ app.get("/bill/:id", (req, res) => {
     const bill = bills[0];
     db.query(`
       SELECT bi.item_id, bi.batch_id, bi.product_id, bi.quantity,
-             bi.selling_price, bi.total_amount,
+             bi.selling_price, bi.total_amount, bi.restocked,
              COALESCE(p2.name, p1.name, 'Product') as product_name,
              COALESCE(p2.product_code, p1.product_code, '') as product_code,
              COALESCE(bi.product_id, pb.product_id) as resolved_product_id
@@ -413,25 +423,29 @@ app.get("/bill/:id", (req, res) => {
       WHERE bi.bill_id=?
     `, [req.params.id], (err2, items) => {
       if (err2) return res.status(500).json({ error: err2.message });
+      const isRet = bill.bill_type === "RETURN";
       res.json({
         bill_id: bill.bill_id,
         bill_no: bill.bill_id,
+        bill_type: bill.bill_type || "RETAIL",
+        is_return: isRet,
         bill_date: bill.bill_date,
         payment_mode: bill.payment_mode,
         cancelled: bill.cancelled,
         customer: bill.customer_name,
         phone: bill.phone || "",
         address: bill.address || "",
-        total: parseFloat(bill.grand_total) || items.reduce((s, i) => s + parseFloat(i.total_amount), 0),
+        total: Math.abs(parseFloat(bill.grand_total) || items.reduce((s, i) => s + parseFloat(i.total_amount), 0)),
         items: items.map(i => ({
           item_id: i.item_id,
           batch_id: i.batch_id,
           product_id: i.resolved_product_id,
           product_code: i.product_code || "",
           product: i.product_name || "Product",
-          quantity: i.quantity,
+          quantity: Math.abs(i.quantity),
           rate: parseFloat(i.selling_price),
-          total_amount: parseFloat(i.total_amount)
+          total_amount: Math.abs(parseFloat(i.total_amount)),
+          restocked: i.restocked
         }))
       });
     });
@@ -444,7 +458,7 @@ app.get("/search-bills", (req, res) => {
   db.query(`
     SELECT b.bill_id, b.bill_date, b.payment_mode, b.cancelled,
            COALESCE(b.grand_total,0) as grand_total,
-           COALESCE(c.name,'Walk-in') as customer_name
+           COALESCE(c.name,'Walk-in') as customer_name, b.bill_type
     FROM bills b LEFT JOIN customers c ON b.customer_id=c.customer_id
     WHERE c.name LIKE ?
     ORDER BY b.bill_date DESC LIMIT 30
@@ -460,6 +474,7 @@ app.post("/cancel-bill/:id", (req, res) => {
     if (err || !bills.length) return res.status(404).json({ error: "Bill not found" });
     if (bills[0].cancelled) return res.status(400).json({ error: "Already cancelled" });
     const bill = bills[0];
+    if (bill.bill_type === "RETURN") return cancelReturnBill(bill, res);
 
     db.query("SELECT * FROM bill_items WHERE bill_id=?", [bill_id], (err2, items) => {
       if (err2) return res.status(500).json({ error: err2.message });
@@ -514,29 +529,7 @@ app.post("/cancel-bill/:id", (req, res) => {
   });
 });
 
-app.put("/update-bill/:id", (req, res) => {
-  const bill_id = req.params.id;
-  const { items } = req.body;
-  db.query("SELECT cancelled FROM bills WHERE bill_id=?", [bill_id], (err, r) => {
-    if (err || !r.length) return res.status(404).json({ error: "Bill not found" });
-    if (r[0].cancelled) return res.status(400).json({ error: "Cannot edit cancelled bill" });
-    let done = 0;
-    const newTotal = items.reduce((s, i) => s + (parseFloat(i.total_amount) || 0), 0);
-    if (!items.length) return res.json({ success: true });
-    items.forEach(item => {
-      db.query("UPDATE bill_items SET selling_price=?, total_amount=? WHERE item_id=?",
-        [item.rate, item.total_amount, item.item_id],
-        () => {
-          done++;
-          if (done === items.length) {
-            db.query("UPDATE bills SET grand_total=? WHERE bill_id=?", [newTotal, bill_id]);
-            res.json({ success: true });
-          }
-        }
-      );
-    });
-  });
-});
+
 
 // ================= SUPPLIERS =================
 app.get("/suppliers", (req, res) => {
@@ -609,6 +602,15 @@ app.post("/create-purchase-bill", (req, res) => {
   const { supplier_id, bill_date, payment_mode, items, note, initial_payment } = req.body;
   if (!items || !items.length) return res.status(400).json({ error: "No items" });
 
+  // Validate every row BEFORE touching the database
+  for (let n = 0; n < items.length; n++) {
+    const it = items[n];
+    if (!it.product_id) return res.status(400).json({ error: "Row " + (n + 1) + ": product not selected" });
+    if (!(parseInt(it.quantity) > 0)) return res.status(400).json({ error: "Row " + (n + 1) + ": invalid quantity" });
+    if (!(parseFloat(it.purchase_price) > 0)) return res.status(400).json({ error: "Row " + (n + 1) + ": invalid purchase price" });
+    if (!(parseFloat(it.selling_price) > 0)) return res.status(400).json({ error: "Row " + (n + 1) + ": invalid selling price" });
+  }
+
   const finalDate = bill_date || new Date().toISOString().split("T")[0];
   const total_amount = items.reduce((s, i) => s + (parseFloat(i.purchase_price) * parseInt(i.quantity)), 0);
   const paid_amount = parseFloat(initial_payment) || (payment_mode !== "CREDIT" ? total_amount : 0);
@@ -620,33 +622,52 @@ app.post("/create-purchase-bill", (req, res) => {
     (err, result) => {
       if (err) return res.status(500).json({ error: err.message });
       const pb_id = result.insertId;
-      let processed = 0;
+      const createdBatches = [];
 
-      // Update supplier balance if credit
-      if (payment_mode === "CREDIT" && supplier_id && balance > 0) {
-        db.query("UPDATE suppliers SET balance = balance + ? WHERE supplier_id=?", [balance, supplier_id]);
-      }
+      // If any row fails, undo everything from this bill so nothing is half-saved
+      const rollback = (message) => {
+        const undo = (k) => {
+          if (k >= createdBatches.length) {
+            return db.query("DELETE FROM purchase_bills WHERE pb_id=?", [pb_id],
+              () => res.status(500).json({ error: message }));
+          }
+          db.query("DELETE FROM product_batches WHERE batch_id=?", [createdBatches[k]], () => undo(k + 1));
+        };
+        undo(0);
+      };
 
-      items.forEach(item => {
+      const processItem = (idx) => {
+        if (idx >= items.length) {
+          const finish = () => res.json({ success: true, pb_id, total_amount, paid_amount, balance, items_added: items.length });
+          if (payment_mode === "CREDIT" && supplier_id && balance > 0) {
+            return db.query("UPDATE suppliers SET balance = balance + ? WHERE supplier_id=?", [balance, supplier_id], finish);
+          }
+          return finish();
+        }
+        const item = items[idx];
         const { product_id, quantity, purchase_price, selling_price, min_stock } = item;
+        const wpv = parseFloat(item.wholesale_price);
+        if (wpv > 0) db.query("UPDATE products SET wholesale_price=? WHERE product_id=?", [wpv, product_id], () => {});
 
-        // Create new batch — this updates stock automatically
+        // New batch = stock added for this product
         db.query(
           "INSERT INTO product_batches (product_id, purchase_price, quantity, remaining_quantity, mrp, gst_percent, purchase_date, min_stock) VALUES (?,?,?,?,?,0,?,?)",
           [product_id, purchase_price, quantity, quantity, selling_price, finalDate, min_stock || 5],
           (err2, batchResult) => {
-            const batch_id = err2 ? null : batchResult.insertId;
+            if (err2) return rollback("Row " + (idx + 1) + ": could not add stock - " + err2.message);
+            createdBatches.push(batchResult.insertId);
             db.query(
               "INSERT INTO purchase_bill_items (pb_id, product_id, batch_id, quantity, purchase_price, selling_price, min_stock) VALUES (?,?,?,?,?,?,?)",
-              [pb_id, product_id, batch_id, quantity, purchase_price, selling_price, min_stock || 5]
+              [pb_id, product_id, batchResult.insertId, quantity, purchase_price, selling_price, min_stock || 5],
+              (err3) => {
+                if (err3) return rollback("Row " + (idx + 1) + ": could not save bill item - " + err3.message);
+                processItem(idx + 1);
+              }
             );
-            processed++;
-            if (processed === items.length) {
-              res.json({ success: true, pb_id, total_amount, paid_amount, balance });
-            }
           }
         );
-      });
+      };
+      processItem(0);
     }
   );
 });
@@ -674,9 +695,12 @@ app.get("/purchase-bill/:id", (req, res) => {
     const bill = bills[0];
 
     db.query(`
-      SELECT pbi.*, p.name as product_name, p.product_code
+      SELECT pbi.*, p.name as product_name, p.product_code, p.wholesale_price,
+             b.remaining_quantity AS batch_remaining,
+             (b.quantity - b.remaining_quantity) AS sold_qty
       FROM purchase_bill_items pbi
       LEFT JOIN products p ON pbi.product_id=p.product_id
+      LEFT JOIN product_batches b ON b.batch_id=pbi.batch_id
       WHERE pbi.pb_id=?
     `, [req.params.id], (err2, items) => {
       if (err2) return res.status(500).json({ error: err2.message });
@@ -738,7 +762,7 @@ app.get("/sales-by-date", (req, res) => {
     SELECT b.bill_id, b.bill_date, b.payment_mode, b.cancelled,
            COALESCE(b.grand_total,0) as grand_total,
            COALESCE(c.name,'Walk-in') as customer_name,
-           COALESCE(SUM(bi.profit),0) as bill_profit
+           b.bill_type, COALESCE(SUM(bi.profit),0) as bill_profit
     FROM bills b
     LEFT JOIN customers c ON b.customer_id=c.customer_id
     LEFT JOIN bill_items bi ON b.bill_id=bi.bill_id
@@ -1042,125 +1066,147 @@ app.post("/convert-quotation/:id", (req, res) => {
 });
 
 // ================= ALTER BILL (flexible) =================
-app.put("/alter-bill/:id", (req, res) => {
-  const bill_id = req.params.id;
+async function alterBillHandler(req, res) {
+  const pdb = db.promise();
+  const bill_id = parseInt(req.params.id);
   const { items, deleted_item_ids } = req.body;
-  db.query("SELECT cancelled FROM bills WHERE bill_id=?", [bill_id], (err, r) => {
-    if (err || !r.length) return res.status(404).json({ error: "Not found" });
-    if (r[0].cancelled) return res.status(400).json({ error: "Cannot edit cancelled bill" });
-    const doDeletes = (cb) => {
-      if (!deleted_item_ids || !deleted_item_ids.length) return cb();
-      let done = 0;
-      deleted_item_ids.forEach(item_id => {
-        db.query("SELECT * FROM bill_items WHERE item_id=?", [item_id], (e, rows) => {
-          if (rows && rows.length && rows[0].batch_id) {
-            db.query("SELECT * FROM product_batches WHERE batch_id=?", [rows[0].batch_id], (e2, batches) => {
-              if (batches && batches.length) db.query("UPDATE product_batches SET remaining_quantity = remaining_quantity + ? WHERE batch_id=?", [rows[0].quantity, rows[0].batch_id]);
-            });
-          }
-          db.query("DELETE FROM bill_items WHERE item_id=?", [item_id], () => { done++; if (done === deleted_item_ids.length) cb(); });
-        });
-      });
-    };
-    doDeletes(() => {
-      const existing = items.filter(i => i.item_id && i.item_id !== "new" && i.item_id !== 0);
-      const newItems = items.filter(i => !i.item_id || i.item_id === "new" || i.item_id === 0);
-      const total_ops = existing.length + newItems.length;
-      let done_ops = 0;
-      const finish = () => {
-        db.query("SELECT SUM(total_amount) as total FROM bill_items WHERE bill_id=?", [bill_id], (e, r2) => {
-          const newTotal = parseFloat(r2[0].total) || 0;
-          db.query("UPDATE bills SET grand_total=? WHERE bill_id=?", [newTotal, bill_id], () => {
-            res.json({ success: true, new_total: newTotal });
-          });
-        });
-      };
-      const checkDone = () => {
-        done_ops++;
-        if (done_ops === total_ops) finish();
-      };
-      if (total_ops === 0) return finish();
-      if (existing.length) {
-        existing.forEach(item => {
-          // Restore old batch stock if batch changed
-          db.query("SELECT batch_id, quantity FROM bill_items WHERE item_id=?", [item.item_id], (e, oldRows) => {
-            if (oldRows && oldRows.length) {
-              const oldBatchId = oldRows[0].batch_id;
-              const oldQty = oldRows[0].quantity;
-              const newBatchId = item.batch_id || null;
-              const newQty = item.quantity;
+  const _r2 = (v) => Math.round(v * 100) / 100;
+  try {
+    if (!Array.isArray(items)) return res.status(400).json({ error: "No items sent" });
+    const [bills] = await pdb.query("SELECT * FROM bills WHERE bill_id=?", [bill_id]);
+    if (!bills.length) return res.status(404).json({ error: "Not found" });
+    const bill = bills[0];
+    if (bill.cancelled) return res.status(400).json({ error: "Cannot edit cancelled bill" });
+    if (bill.bill_type === "RETURN") return res.status(400).json({ error: "A return bill can't be altered. Cancel it and enter a new return." });
 
-              const doUpdate = () => {
-                // Get product hsn_code
-                const hsnQuery = item.product_id
-                  ? "SELECT hsn_code FROM products WHERE product_id=?"
-                  : null;
-                const getHsn = (cb) => {
-                  if (!item.product_id) return cb("");
-                  db.query(hsnQuery, [item.product_id], (e, r) => cb(r && r.length ? r[0].hsn_code || "" : ""));
-                };
-                getHsn((hsn) => {
-                  db.query(
-                    "UPDATE bill_items SET selling_price=?, total_amount=?, quantity=?, batch_id=?, product_id=?, hsn_code=? WHERE item_id=?",
-                    [item.rate, item.total_amount, newQty, newBatchId, item.product_id || null, hsn, item.item_id],
-                    () => checkDone()
-                  );
-                });
-              };
+    const [oldItems] = await pdb.query("SELECT * FROM bill_items WHERE bill_id=?", [bill_id]);
+    const oldMap = new Map(oldItems.map(r => [r.item_id, r]));
 
-              if (oldBatchId && oldBatchId !== newBatchId) {
-                // Restore stock to old batch
-                db.query("UPDATE product_batches SET remaining_quantity = remaining_quantity + ? WHERE batch_id=?",
-                  [oldQty, oldBatchId], () => {
-                    // Deduct from new batch
-                    if (newBatchId) {
-                      db.query("UPDATE product_batches SET remaining_quantity = remaining_quantity - ? WHERE batch_id=?",
-                        [newQty, newBatchId], doUpdate);
-                    } else doUpdate();
-                  });
-              } else if (oldBatchId && oldBatchId === newBatchId && oldQty !== newQty) {
-                // Same batch, quantity changed — adjust stock
-                const diff = newQty - oldQty;
-                db.query("UPDATE product_batches SET remaining_quantity = remaining_quantity - ? WHERE batch_id=?",
-                  [diff, oldBatchId], doUpdate);
-              } else {
-                doUpdate();
-              }
-            } else {
-              checkDone();
-            }
-          });
-        });
+    // rows being removed
+    const delIds = new Set();
+    for (const raw of (deleted_item_ids || [])) {
+      const id = parseInt(raw);
+      if (!oldMap.has(id)) return res.status(400).json({ error: "An item to remove does not belong to this bill" });
+      delIds.add(id);
+    }
+
+    // ---- check every row BEFORE changing anything ----
+    const rows = [];
+    const seen = new Set();
+    for (let n = 0; n < items.length; n++) {
+      const it = items[n];
+      const label = "Row " + (n + 1);
+      const isNew = it.item_id == null || it.item_id === "new" || it.item_id === 0 || it.item_id === "";
+      const qty = parseInt(it.quantity);
+      const rate = parseFloat(it.rate);
+      if (!(qty > 0)) return res.status(400).json({ error: label + ": enter a quantity" });
+      if (!(rate > 0)) return res.status(400).json({ error: label + ": enter a rate" });
+      let total = parseFloat(it.total_amount);
+      if (!(total > 0)) total = _r2(rate * qty);
+      let old = null;
+      if (!isNew) {
+        old = oldMap.get(parseInt(it.item_id));
+        if (!old) return res.status(400).json({ error: label + ": this item does not belong to this bill" });
+        if (seen.has(old.item_id)) return res.status(400).json({ error: label + ": duplicate item" });
+        if (delIds.has(old.item_id)) return res.status(400).json({ error: label + ": is also marked for removal" });
+        seen.add(old.item_id);
       }
-      if (newItems.length) {
-        newItems.forEach(item => {
-          if (item.batch_id) {
-            db.query("SELECT * FROM product_batches WHERE batch_id=?", [item.batch_id], (e, batches) => {
-              if (batches && batches.length) {
-                const newQty = batches[0].remaining_quantity - item.quantity;
-                if (newQty <= 0) db.query("DELETE FROM product_batches WHERE batch_id=?", [item.batch_id]);
-                else db.query("UPDATE product_batches SET remaining_quantity=? WHERE batch_id=?", [newQty, item.batch_id]);
-              }
-            });
-          }
-          db.query("INSERT INTO bill_items (bill_id, batch_id, product_id, quantity, selling_price, total_amount, profit, hsn_code, gst_percent, cgst, sgst) VALUES (?,?,?,?,?,?,0,'',0,0,0)",
-            [bill_id, item.batch_id || null, item.product_id || null, item.quantity, item.rate, item.total_amount],
-            () => {
-              // Deduct stock atomically for new items
-              if (item.batch_id) {
-                db.query(
-                  "UPDATE product_batches SET remaining_quantity = GREATEST(0, remaining_quantity - ?) WHERE batch_id=?",
-                  [item.quantity, item.batch_id],
-                  () => checkDone()
-                );
-              } else {
-                checkDone();
-              }
-            });
-        });
+      const product_id = it.product_id ? parseInt(it.product_id) : (old ? old.product_id : null);
+      if (!product_id) return res.status(400).json({ error: label + ": select a product" });
+      let batch_id = it.batch_id ? parseInt(it.batch_id) : null;
+      if (!batch_id) {
+        if (old && product_id === old.product_id) batch_id = old.batch_id || null;   // keep the batch it already has
+        else return res.status(400).json({ error: label + ": select the price / batch for this product" });
       }
-    });
-  });
+      rows.push({ label, isNew, old, product_id, batch_id, qty, rate, total });
+    }
+
+    const untouched = oldItems.filter(o => !seen.has(o.item_id) && !delIds.has(o.item_id)).length;
+    if (untouched + rows.length < 1) {
+      return res.status(400).json({ error: "A bill needs at least one item. Use Cancel Bill to cancel the whole bill." });
+    }
+
+    // batches involved
+    const batchIds = new Set();
+    oldItems.forEach(o => o.batch_id && batchIds.add(o.batch_id));
+    rows.forEach(r => r.batch_id && batchIds.add(r.batch_id));
+    const batchMap = new Map();
+    if (batchIds.size) {
+      const [bs] = await pdb.query("SELECT * FROM product_batches WHERE batch_id IN (?)", [[...batchIds]]);
+      bs.forEach(b => batchMap.set(b.batch_id, b));
+    }
+    const prodIds = new Set(rows.map(r => r.product_id));
+    const prodMap = new Map();
+    if (prodIds.size) {
+      const [ps] = await pdb.query("SELECT product_id, name, hsn_code FROM products WHERE product_id IN (?)", [[...prodIds]]);
+      ps.forEach(p => prodMap.set(p.product_id, p));
+    }
+    for (const r of rows) {
+      if (!r.batch_id) continue;
+      const b = batchMap.get(r.batch_id);
+      if (!b) return res.status(400).json({ error: r.label + ": that price / batch no longer exists, please select again" });
+      if (b.product_id !== r.product_id) return res.status(400).json({ error: r.label + ": the selected batch belongs to a different product" });
+      r.batch = b;
+    }
+
+    // net units to take from (or give back to) each batch
+    const delta = new Map();
+    const addDelta = (id, n) => { if (id) delta.set(id, (delta.get(id) || 0) + n); };
+    for (const id of delIds) { const o = oldMap.get(id); addDelta(o.batch_id, -o.quantity); }
+    for (const r of rows) { if (r.old) addDelta(r.old.batch_id, -r.old.quantity); addDelta(r.batch_id, r.qty); }
+    for (const [bid, dlt] of delta) {
+      const b = batchMap.get(bid);
+      if (!b || dlt <= 0) continue;
+      if (b.remaining_quantity - dlt < 0) {
+        const p = prodMap.get(b.product_id);
+        return res.status(400).json({ error: "Not enough stock for " + (p ? p.name : "this product") + " at " + parseFloat(b.mrp).toFixed(2) +
+          ": " + b.remaining_quantity + " in stock, this change needs " + dlt + " more" });
+      }
+    }
+
+    // ---- apply ----
+    for (const [bid, dlt] of delta) {
+      if (dlt !== 0 && batchMap.has(bid)) {
+        await pdb.query("UPDATE product_batches SET remaining_quantity = GREATEST(0, remaining_quantity - ?) WHERE batch_id=?", [dlt, bid]);
+      }
+    }
+    for (const id of delIds) await pdb.query("DELETE FROM bill_items WHERE item_id=?", [id]);
+    for (const r of rows) {
+      const hsn = (prodMap.get(r.product_id) || {}).hsn_code || "";
+      const profit = r.batch ? _r2((r.rate - parseFloat(r.batch.purchase_price)) * r.qty) : (r.old ? parseFloat(r.old.profit) || 0 : 0);
+      if (r.isNew) {
+        await pdb.query(
+          "INSERT INTO bill_items (bill_id, batch_id, product_id, quantity, selling_price, total_amount, profit, hsn_code, gst_percent, cgst, sgst) VALUES (?,?,?,?,?,?,?,?,0,0,0)",
+          [bill_id, r.batch_id, r.product_id, r.qty, r.rate, r.total, profit, hsn]);
+      } else {
+        await pdb.query(
+          "UPDATE bill_items SET batch_id=?, product_id=?, quantity=?, selling_price=?, total_amount=?, profit=?, hsn_code=? WHERE item_id=?",
+          [r.batch_id, r.product_id, r.qty, r.rate, r.total, profit, hsn, r.old.item_id]);
+      }
+    }
+
+    const [[sum]] = await pdb.query("SELECT COALESCE(SUM(total_amount),0) AS t FROM bill_items WHERE bill_id=?", [bill_id]);
+    const newTotal = _r2(parseFloat(sum.t));
+    const oldTotal = _r2(parseFloat(bill.grand_total) || 0);
+    await pdb.query("UPDATE bills SET grand_total=? WHERE bill_id=?", [newTotal, bill_id]);
+    // credit bill: keep the customer's outstanding balance in step with the bill
+    if (bill.payment_mode === "CREDIT" && bill.customer_id) {
+      const dlt = _r2(newTotal - oldTotal);
+      if (dlt !== 0) await pdb.query("UPDATE customers SET balance = balance + ? WHERE customer_id=?", [dlt, bill.customer_id]);
+    }
+    res.json({ success: true, new_total: newTotal });
+  } catch (err) {
+    if (!res.headersSent) {
+      res.status(500).json({ error: "Could not update the bill: " + err.message + ". Reload the bill to see its current state." });
+    }
+  }
+}
+
+app.put("/alter-bill/:id", alterBillHandler);
+// The Find Bill page saves through this address; it now runs the same logic
+app.put("/update-bill/:id", (req, res) => {
+  if (req.body && !req.body.deleted_item_ids && req.body.deletedItemIds) req.body.deleted_item_ids = req.body.deletedItemIds;
+  return alterBillHandler(req, res);
 });
 
 
@@ -1352,8 +1398,10 @@ app.get("/customer-statement/:id", (req, res) => {
     if (to_date)   { cpWhere += " AND DATE(cp.payment_date)<=?"; cpParams.push(to_date); }
 
     db.query(`
-      SELECT b.bill_id, b.bill_date as txn_date, b.grand_total as debit_amt,
-             0 as credit_amt, b.payment_mode, 'Sales' as txn_type, b.bill_id as ref_no
+      SELECT b.bill_id, b.bill_date as txn_date,
+             CASE WHEN b.bill_type='RETURN' THEN 0 ELSE b.grand_total END as debit_amt,
+             CASE WHEN b.bill_type='RETURN' THEN -b.grand_total ELSE 0 END as credit_amt,
+             b.payment_mode, CASE WHEN b.bill_type='RETURN' THEN 'Return' ELSE 'Sales' END as txn_type, b.bill_id as ref_no
       FROM bills b WHERE ${billWhere}
       UNION ALL
       SELECT cp.payment_id, cp.payment_date, 0, cp.amount, 'Receipt', 'Payment', cp.payment_id
@@ -1372,6 +1420,7 @@ app.get("/customer-statement/:id", (req, res) => {
       let totalUPI = 0;
       let totalCredit = 0;
       let totalPaid = 0;
+      let totalReturns = 0;
 
       const rows = txns.map(t => {
         const debit = parseFloat(t.debit_amt) || 0;
@@ -1384,6 +1433,11 @@ app.get("/customer-statement/:id", (req, res) => {
         } else if (t.txn_type === 'Payment') {
           creditBalance -= credit;
           totalPaid += credit;
+        } else if (t.txn_type === 'Return') {
+          totalSales -= credit; totalReturns += credit;
+          if (t.payment_mode === 'CREDIT') { creditBalance -= credit; totalCredit -= credit; }
+          else if (t.payment_mode === 'Cash') totalCash -= credit;
+          else if (t.payment_mode === 'UPI') totalUPI -= credit;
         }
         return { ...t, running_balance: creditBalance };
       });
@@ -1396,7 +1450,8 @@ app.get("/customer-statement/:id", (req, res) => {
         total_cash: totalCash,
         total_upi: totalUPI,
         total_credit: totalCredit,
-        total_paid: totalPaid
+        total_paid: totalPaid,
+        total_returns: totalReturns
       });
     });
   });
@@ -1479,14 +1534,19 @@ app.get("/products-page", (req, res) => {
 
 // Update product details
 app.put("/product/:id", (req, res) => {
-  const { name, hsn_code, brand, product_code } = req.body;
-  db.query("UPDATE products SET name=?, hsn_code=?, brand=?, product_code=? WHERE product_id=?",
-    [name, hsn_code||null, brand||null, product_code||null, req.params.id],
-    (err) => {
-      if (err) return res.status(500).json({ error: err.message });
-      res.json({ success: true });
-    }
-  );
+  const { name, hsn_code, brand, product_code, wholesale_price } = req.body;
+  let sql = "UPDATE products SET name=?, hsn_code=?, brand=?, product_code=?";
+  const params = [name, hsn_code || null, brand || null, product_code || null];
+  if (wholesale_price !== undefined) {   // older pages don't send it: leave the saved price alone
+    const wp = (wholesale_price === null || wholesale_price === "") ? null : parseFloat(wholesale_price);
+    if (wp !== null && !(wp > 0)) return res.status(400).json({ error: "Wholesale price must be a positive number" });
+    sql += ", wholesale_price=?"; params.push(wp);
+  }
+  sql += " WHERE product_id=?"; params.push(req.params.id);
+  db.query(sql, params, (err) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ success: true });
+  });
 });
 
 // ================= RETRIEVE BILL UPDATES =================
@@ -1498,7 +1558,7 @@ app.get("/search-bills-by-phone", (req, res) => {
     SELECT b.bill_id, b.bill_date, b.payment_mode, b.cancelled,
            COALESCE(b.grand_total,0) as grand_total,
            COALESCE(c.name,'Walk-in') as customer_name,
-           c.phone as customer_phone
+           c.phone as customer_phone, b.bill_type
     FROM bills b LEFT JOIN customers c ON b.customer_id=c.customer_id
     WHERE c.phone LIKE ? OR b.bill_id IN (
       SELECT bill_id FROM bills WHERE customer_id IN (
@@ -1522,7 +1582,7 @@ app.get("/outstanding-credits", (req, res) => {
     FROM bills b
     LEFT JOIN customers c ON b.customer_id=c.customer_id
     WHERE b.payment_mode='CREDIT' AND b.cancelled=0
-      AND COALESCE(c.balance, 0) > 0
+      AND COALESCE(c.balance, 0) > 0 AND b.bill_type <> 'RETURN'
     ORDER BY b.bill_date DESC
   `, (err, r) => {
     if (err) return res.json([]);
@@ -1606,8 +1666,8 @@ app.get("/bill-stats", (req, res) => {
   const today = new Date().toISOString().split("T")[0];
   db.query(`
     SELECT
-      COUNT(*) as total_bills,
-      SUM(CASE WHEN DATE(bill_date)=? AND cancelled=0 THEN 1 ELSE 0 END) as today_bills,
+      SUM(CASE WHEN bill_type<>'RETURN' THEN 1 ELSE 0 END) as total_bills,
+      SUM(CASE WHEN DATE(bill_date)=? AND cancelled=0 AND bill_type<>'RETURN' THEN 1 ELSE 0 END) as today_bills,
       SUM(CASE WHEN DATE(bill_date)=? AND cancelled=0 THEN grand_total ELSE 0 END) as today_sales,
       MAX(bill_id) as last_bill_id
     FROM bills WHERE cancelled=0
@@ -1630,5 +1690,359 @@ app.delete("/quotation/:id", (req, res) => {
   });
 });
 
+
+// ================= ALTER PURCHASE BILL =================
+// items = the FINAL list of rows. Rows with a pbi_id are existing ones (edited);
+// rows with pbi_id "new" are added; existing rows missing from the list are removed.
+app.put("/purchase-bill/:id", async (req, res) => {
+  const pdb = db.promise();
+  const pb_id = parseInt(req.params.id);
+  const { items, bill_date, note } = req.body;
+  const _r2 = (v) => Math.round(v * 100) / 100;
+  try {
+    if (!Array.isArray(items) || !items.length) {
+      return res.status(400).json({ error: "A purchase bill needs at least one item" });
+    }
+    const [bills] = await pdb.query("SELECT * FROM purchase_bills WHERE pb_id=?", [pb_id]);
+    if (!bills.length) return res.status(404).json({ error: "Purchase bill not found" });
+    const bill = bills[0];
+
+    const [existing] = await pdb.query(
+      `SELECT pbi.pbi_id, pbi.product_id, pbi.quantity, pbi.purchase_price, pbi.selling_price,
+              p.name AS product_name,
+              b.batch_id AS b_id, b.quantity AS b_qty, b.remaining_quantity AS b_rem
+       FROM purchase_bill_items pbi
+       LEFT JOIN products p ON p.product_id = pbi.product_id
+       LEFT JOIN product_batches b ON b.batch_id = pbi.batch_id
+       WHERE pbi.pb_id=?`, [pb_id]);
+    const existingMap = new Map(existing.map(e => [e.pbi_id, e]));
+
+    // ---- validate everything BEFORE writing anything ----
+    const keptIds = new Set();
+    const clean = [];
+    for (let n = 0; n < items.length; n++) {
+      const it = items[n];
+      const row = "Row " + (n + 1);
+      const isNew = it.pbi_id === "new" || it.pbi_id == null || it.pbi_id === "";
+      const c = {
+        row, isNew,
+        product_id: parseInt(it.product_id),
+        qty: parseInt(it.quantity),
+        pp: parseFloat(it.purchase_price),
+        sp: parseFloat(it.selling_price),
+        wp: parseFloat(it.wholesale_price),
+        ms: parseInt(it.min_stock) || 5
+      };
+      if (!c.product_id) return res.status(400).json({ error: row + ": product not selected" });
+      if (!(c.qty > 0)) return res.status(400).json({ error: row + ": invalid quantity" });
+      if (!(c.pp > 0)) return res.status(400).json({ error: row + ": invalid purchase price" });
+      if (!(c.sp > 0)) return res.status(400).json({ error: row + ": invalid selling price" });
+      if (!isNew) {
+        c.id = parseInt(it.pbi_id);
+        const e = existingMap.get(c.id);
+        if (!e) return res.status(400).json({ error: row + ": this item does not belong to this bill" });
+        if (keptIds.has(c.id)) return res.status(400).json({ error: row + ": duplicate item" });
+        keptIds.add(c.id);
+        if (e.b_id) {
+          c.sold = Math.max(0, e.b_qty - e.b_rem);
+          if (c.qty < c.sold) {
+            return res.status(400).json({ error: row + ": " + c.sold + " unit(s) already sold from this stock, so the quantity can't be less than " + c.sold });
+          }
+          if (c.product_id !== e.product_id && c.sold > 0) {
+            return res.status(400).json({ error: row + ": can't change the product, " + c.sold + " unit(s) already sold" });
+          }
+        } else {
+          const unchanged = c.product_id === e.product_id && c.qty === e.quantity &&
+            _r2(c.pp) === _r2(parseFloat(e.purchase_price)) && _r2(c.sp) === _r2(parseFloat(e.selling_price));
+          if (!unchanged) {
+            return res.status(400).json({ error: row + ": its stock batch no longer exists (it was deleted from Products), so this row can't be changed" });
+          }
+          c.skipBatch = true;
+        }
+      }
+      clean.push(c);
+    }
+
+    const removed = existing.filter(e => !keptIds.has(e.pbi_id));
+    for (const e of removed) {
+      if (e.b_id) {
+        const sold = Math.max(0, e.b_qty - e.b_rem);
+        if (sold > 0) {
+          return res.status(400).json({ error: (e.product_name || "Item") + ": " + sold + " unit(s) already sold from this stock, so it can't be removed" });
+        }
+      }
+    }
+
+    const isCredit = bill.payment_mode === "CREDIT";
+    const oldBalance = _r2(parseFloat(bill.balance) || 0);
+    const paid = _r2(parseFloat(bill.paid_amount) || 0);
+    const newTotal = _r2(clean.reduce((s, c) => s + c.pp * c.qty, 0));
+    let newPaid = paid, newBalance;
+    if (isCredit) {
+      if (newTotal < paid) {
+        return res.status(400).json({ error: "New total (" + newTotal.toFixed(2) + ") is less than the " + paid.toFixed(2) + " already paid on this bill" });
+      }
+      newBalance = _r2(newTotal - paid);
+    } else {
+      // Cash/UPI purchase: what was paid is the corrected bill total
+      newPaid = newTotal;
+      newBalance = 0;
+    }
+
+    const [[dr]] = await pdb.query("SELECT DATE_FORMAT(bill_date,'%Y-%m-%d') AS d FROM purchase_bills WHERE pb_id=?", [pb_id]);
+    const finalDate = bill_date || dr.d;
+
+    // ---- apply ----
+    for (const e of removed) {
+      if (e.b_id) {
+        await pdb.query("UPDATE bill_items SET batch_id=NULL WHERE batch_id=?", [e.b_id]);
+        await pdb.query("DELETE FROM product_batches WHERE batch_id=?", [e.b_id]);
+      }
+      await pdb.query("DELETE FROM purchase_bill_items WHERE pbi_id=?", [e.pbi_id]);
+    }
+    for (const c of clean) {
+      if (c.isNew) {
+        const [r] = await pdb.query(
+          "INSERT INTO product_batches (product_id, purchase_price, quantity, remaining_quantity, mrp, gst_percent, purchase_date, min_stock) VALUES (?,?,?,?,?,0,?,?)",
+          [c.product_id, c.pp, c.qty, c.qty, c.sp, finalDate, c.ms]);
+        await pdb.query(
+          "INSERT INTO purchase_bill_items (pb_id, product_id, batch_id, quantity, purchase_price, selling_price, min_stock) VALUES (?,?,?,?,?,?,?)",
+          [pb_id, c.product_id, r.insertId, c.qty, c.pp, c.sp, c.ms]);
+      } else {
+        const e = existingMap.get(c.id);
+        if (e.b_id) {
+          await pdb.query(
+            "UPDATE product_batches SET product_id=?, purchase_price=?, mrp=?, quantity=?, remaining_quantity=?, min_stock=?, purchase_date=? WHERE batch_id=?",
+            [c.product_id, c.pp, c.sp, c.qty, c.qty - c.sold, c.ms, finalDate, e.b_id]);
+        }
+        await pdb.query(
+          "UPDATE purchase_bill_items SET product_id=?, quantity=?, purchase_price=?, selling_price=?, min_stock=? WHERE pbi_id=?",
+          [c.product_id, c.qty, c.pp, c.sp, c.ms, c.id]);
+      }
+    }
+    for (const c of clean) {
+      if (c.wp > 0) await pdb.query("UPDATE products SET wholesale_price=? WHERE product_id=?", [c.wp, c.product_id]);
+    }
+    await pdb.query(
+      "UPDATE purchase_bills SET total_amount=?, paid_amount=?, balance=?, bill_date=?, note=COALESCE(?, note) WHERE pb_id=?",
+      [newTotal, newPaid, newBalance, finalDate, note === undefined ? null : note, pb_id]);
+    if (isCredit && bill.supplier_id) {
+      const delta = _r2(newBalance - oldBalance);
+      if (delta !== 0) await pdb.query("UPDATE suppliers SET balance = balance + ? WHERE supplier_id=?", [delta, bill.supplier_id]);
+    }
+    res.json({ success: true, total_amount: newTotal, paid_amount: newPaid, balance: newBalance });
+  } catch (err) {
+    if (!res.headersSent) {
+      res.status(500).json({ error: "Could not update the purchase bill: " + err.message + ". Reload the bill to see its current state." });
+    }
+  }
+});
+
+// ================= DELETE PURCHASE BILL =================
+app.delete("/purchase-bill/:id", async (req, res) => {
+  const pdb = db.promise();
+  const pb_id = parseInt(req.params.id);
+  const _r2 = (v) => Math.round(v * 100) / 100;
+  try {
+    const [bills] = await pdb.query("SELECT * FROM purchase_bills WHERE pb_id=?", [pb_id]);
+    if (!bills.length) return res.status(404).json({ error: "Purchase bill not found" });
+    const bill = bills[0];
+
+    const [pay] = await pdb.query("SELECT COUNT(*) AS c, COALESCE(SUM(amount),0) AS total FROM supplier_payments WHERE pb_id=?", [pb_id]);
+    if (pay[0].c > 0) {
+      return res.status(400).json({ error: "Payments totalling " + parseFloat(pay[0].total).toFixed(2) + " are recorded against this bill, so it can't be deleted. Use Alter instead." });
+    }
+
+    const [items] = await pdb.query(
+      `SELECT p.name AS product_name, b.batch_id AS b_id, b.quantity AS b_qty, b.remaining_quantity AS b_rem
+       FROM purchase_bill_items pbi
+       LEFT JOIN products p ON p.product_id = pbi.product_id
+       LEFT JOIN product_batches b ON b.batch_id = pbi.batch_id
+       WHERE pbi.pb_id=?`, [pb_id]);
+    for (const it of items) {
+      if (it.b_id) {
+        const sold = Math.max(0, it.b_qty - it.b_rem);
+        if (sold > 0) {
+          return res.status(400).json({ error: (it.product_name || "Item") + ": " + sold + " unit(s) already sold from this stock, so the bill can't be deleted" });
+        }
+      }
+    }
+
+    for (const it of items) {
+      if (it.b_id) {
+        await pdb.query("UPDATE bill_items SET batch_id=NULL WHERE batch_id=?", [it.b_id]);
+        await pdb.query("DELETE FROM product_batches WHERE batch_id=?", [it.b_id]);
+      }
+    }
+    await pdb.query("DELETE FROM purchase_bills WHERE pb_id=?", [pb_id]);  // items cascade
+    if (bill.payment_mode === "CREDIT" && bill.supplier_id) {
+      const bal = _r2(parseFloat(bill.balance) || 0);
+      if (bal !== 0) await pdb.query("UPDATE suppliers SET balance = balance - ? WHERE supplier_id=?", [bal, bill.supplier_id]);
+    }
+    res.json({ success: true });
+  } catch (err) {
+    if (!res.headersSent) res.status(500).json({ error: "Could not delete the purchase bill: " + err.message });
+  }
+});
+
+
+// ================= SALES RETURN =================
+// A return is saved as a bill with negative amounts, so every sales / cash / UPI / profit
+// report subtracts it automatically. Returned goods go back into the chosen stock batch.
+app.post("/create-return", async (req, res) => {
+  const pdb = db.promise();
+  const { items, refund_mode, customer_id, walkin_name, walkin_phone, bill_date } = req.body;
+  const _r2 = (v) => Math.round(v * 100) / 100;
+  const undo = { batches: [], billId: null, custId: null };
+  try {
+    if (!Array.isArray(items) || !items.length) return res.status(400).json({ error: "No items" });
+    const mode = ["Cash", "UPI", "CREDIT"].includes(refund_mode) ? refund_mode : null;
+    if (!mode) return res.status(400).json({ error: "Choose how the money is returned (Cash, UPI or Credit)" });
+
+    // ---- check every row BEFORE changing anything ----
+    const rows = [];
+    for (let n = 0; n < items.length; n++) {
+      const it = items[n];
+      const label = "Row " + (n + 1);
+      const product_id = parseInt(it.product_id), batch_id = parseInt(it.batch_id);
+      const qty = parseInt(it.quantity), rate = parseFloat(it.rate);
+      if (!product_id) return res.status(400).json({ error: label + ": select a product" });
+      if (!batch_id) return res.status(400).json({ error: label + ": select the stock batch the item belongs to" });
+      if (!(qty > 0)) return res.status(400).json({ error: label + ": enter a quantity" });
+      if (!(rate > 0)) return res.status(400).json({ error: label + ": enter the return rate" });
+      let total = parseFloat(it.total_amount);
+      if (!(total > 0)) total = rate * qty;
+      rows.push({ label, product_id, batch_id, qty, rate, total: _r2(total),
+                  restock: !(it.restock === false || it.restock === 0 || it.restock === "0") });
+    }
+    const [bs] = await pdb.query(
+      "SELECT pb.*, p.hsn_code FROM product_batches pb JOIN products p ON p.product_id=pb.product_id WHERE pb.batch_id IN (?)",
+      [[...new Set(rows.map(r => r.batch_id))]]);
+    const bMap = new Map(bs.map(b => [b.batch_id, b]));
+    for (const r of rows) {
+      const b = bMap.get(r.batch_id);
+      if (!b) return res.status(400).json({ error: r.label + ": that stock batch no longer exists, please select again" });
+      if (b.product_id !== r.product_id) return res.status(400).json({ error: r.label + ": the batch belongs to a different product" });
+      r.b = b;
+    }
+    const total = _r2(rows.reduce((s, r) => s + r.total, 0));
+
+    let cust_id = customer_id ? parseInt(customer_id) : null;
+    if (mode === "CREDIT") {
+      if (!cust_id) return res.status(400).json({ error: "Returning against credit needs a regular customer. Pick one, or choose Cash / UPI." });
+      const [cs] = await pdb.query("SELECT customer_id, name, balance FROM customers WHERE customer_id=?", [cust_id]);
+      if (!cs.length) return res.status(400).json({ error: "Customer not found" });
+      const bal = parseFloat(cs[0].balance) || 0;
+      if (total > bal + 0.001) {
+        return res.status(400).json({ error: "This return (" + total.toFixed(2) + ") is more than " + cs[0].name + "'s outstanding credit (" + bal.toFixed(2) + "). Choose Cash or UPI instead." });
+      }
+    }
+
+    // ---- save ----
+    const [fy] = await pdb.query("SELECT fy_id FROM financial_years WHERE is_active=1 LIMIT 1");
+    const fy_id = fy.length ? fy[0].fy_id : null;
+    const finalDate = bill_date || new Date().toISOString().split("T")[0];
+    if (!cust_id && walkin_name) {
+      const [c] = await pdb.query("INSERT INTO customers (name, phone, balance) VALUES (?,?,0)", [walkin_name, walkin_phone || null]);
+      cust_id = c.insertId; undo.custId = c.insertId;
+    }
+    const [br] = await pdb.query(
+      "INSERT INTO bills (bill_date, payment_mode, customer_id, fy_id, grand_total, cancelled, bill_type) VALUES (?,?,?,?,?,0,'RETURN')",
+      [finalDate, mode, cust_id, fy_id, -total]);
+    const bill_id = br.insertId; undo.billId = bill_id;
+
+    for (const r of rows) {
+      const cost = parseFloat(r.b.purchase_price);
+      // goods back on the shelf: only the margin is lost. Goods not restocked (e.g. broken): the whole amount is lost.
+      const profit = r.restock ? _r2(-(r.total - cost * r.qty)) : -r.total;
+      await pdb.query(
+        "INSERT INTO bill_items (bill_id, batch_id, product_id, quantity, selling_price, total_amount, profit, hsn_code, gst_percent, cgst, sgst, restocked) VALUES (?,?,?,?,?,?,?,?,0,0,0,?)",
+        [bill_id, r.batch_id, r.product_id, -r.qty, r.rate, -r.total, profit, r.b.hsn_code || "", r.restock ? 1 : 0]);
+      if (r.restock) {
+        await pdb.query("UPDATE product_batches SET remaining_quantity = remaining_quantity + ? WHERE batch_id=?", [r.qty, r.batch_id]);
+        undo.batches.push([r.batch_id, r.qty]);
+      }
+    }
+    if (mode === "CREDIT") {
+      await pdb.query("UPDATE customers SET balance = GREATEST(0, balance - ?) WHERE customer_id=?", [total, cust_id]);
+    }
+    res.json({ success: true, bill_id, total });
+  } catch (err) {
+    try {   // put things back the way they were
+      for (const [bid, q] of undo.batches) {
+        await pdb.query("UPDATE product_batches SET remaining_quantity = GREATEST(0, remaining_quantity - ?) WHERE batch_id=?", [q, bid]);
+      }
+      if (undo.billId) {
+        await pdb.query("DELETE FROM bill_items WHERE bill_id=?", [undo.billId]);
+        await pdb.query("DELETE FROM bills WHERE bill_id=?", [undo.billId]);
+      }
+      if (undo.custId) await pdb.query("DELETE FROM customers WHERE customer_id=?", [undo.custId]);
+    } catch (e) { /* nothing more we can do */ }
+    if (!res.headersSent) res.status(500).json({ error: "Could not save the return: " + err.message });
+  }
+});
+
+async function cancelReturnBill(bill, res) {
+  const pdb = db.promise();
+  try {
+    const [items] = await pdb.query(
+      `SELECT bi.batch_id, bi.quantity, bi.restocked, pb.remaining_quantity AS b_rem, p.name AS product_name
+       FROM bill_items bi
+       LEFT JOIN product_batches pb ON pb.batch_id = bi.batch_id
+       LEFT JOIN products p ON p.product_id = bi.product_id
+       WHERE bi.bill_id=?`, [bill.bill_id]);
+    // the stock that came back must still be there to take out again
+    const need = new Map();
+    for (const it of items) {
+      if (it.restocked && it.batch_id && it.b_rem !== null) {
+        const e = need.get(it.batch_id) || { qty: 0, rem: it.b_rem, name: it.product_name };
+        e.qty += Math.abs(it.quantity); need.set(it.batch_id, e);
+      }
+    }
+    for (const [, e] of need) {
+      if (e.rem < e.qty) {
+        return res.status(400).json({ error: "Can't cancel this return: " + e.qty + " unit(s) of " + (e.name || "an item") +
+          " came back into stock but only " + e.rem + " are left (the rest were sold again)" });
+      }
+    }
+    for (const [bid, e] of need) {
+      await pdb.query("UPDATE product_batches SET remaining_quantity = remaining_quantity - ? WHERE batch_id=?", [e.qty, bid]);
+    }
+    if (bill.payment_mode === "CREDIT" && bill.customer_id) {
+      await pdb.query("UPDATE customers SET balance = balance + ? WHERE customer_id=?", [Math.abs(parseFloat(bill.grand_total) || 0), bill.customer_id]);
+    }
+    await pdb.query("UPDATE bills SET cancelled=1, cancelled_at=NOW() WHERE bill_id=?", [bill.bill_id]);
+    res.json({ success: true });
+  } catch (err) {
+    if (!res.headersSent) res.status(500).json({ error: "Could not cancel the return: " + err.message });
+  }
+}
+
 // ================= SERVER =================
-app.listen(3000, () => console.log("Running on port 3000"));
+// ── One-time, additive upgrade for Retail / Wholesale / Return bills (safe to run repeatedly) ──
+const SCHEMA_UPGRADES = [
+  { table: "bills",      column: "bill_type",       ddl: "ALTER TABLE bills ADD COLUMN bill_type VARCHAR(10) NOT NULL DEFAULT 'RETAIL'" },
+  { table: "bill_items", column: "restocked",       ddl: "ALTER TABLE bill_items ADD COLUMN restocked TINYINT NOT NULL DEFAULT 1" },
+  { table: "products",   column: "wholesale_price", ddl: "ALTER TABLE products ADD COLUMN wholesale_price DECIMAL(10,2) NULL" }
+];
+async function ensureSchema() {
+  const pdb = db.promise();
+  try {
+    for (const u of SCHEMA_UPGRADES) {
+      const [r] = await pdb.query(
+        "SELECT COUNT(*) AS c FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=? AND COLUMN_NAME=?",
+        [u.table, u.column]);
+      if (r[0].c === 0) {
+        await pdb.query(u.ddl);
+        console.log("Database upgraded: added " + u.table + "." + u.column);
+      }
+    }
+  } catch (err) {
+    const cantConnect = err.fatal || ["ECONNREFUSED", "ETIMEDOUT", "ENOTFOUND", "PROTOCOL_CONNECTION_LOST"].includes(err.code);
+    SCHEMA_ERROR = cantConnect
+      ? "Can't reach the database (" + err.message + "). Make sure MySQL is running, then restart the server."
+      : "The database needs a one-time update (" + err.message + "). Run bill_types.sql in MySQL, then restart the server.";
+    console.error("\n!!! " + SCHEMA_ERROR + "\n");
+  }
+}
+ensureSchema().then(() => app.listen(3000, () => console.log("Running on port 3000")));

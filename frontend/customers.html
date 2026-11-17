@@ -383,19 +383,20 @@ function loadStatement(){
 
     const tbody=rows.map(t=>{
       const isSales=t.txn_type==="Sales";
+      const isReturn=t.txn_type==="Return";
       const isCredit=isSales&&t.payment_mode==="CREDIT";
       const debit=isSales?parseFloat(t.debit_amt)||0:0;
-      const credit=t.txn_type==="Payment"?parseFloat(t.credit_amt)||0:0;
+      const credit=(t.txn_type==="Payment"||isReturn)?parseFloat(t.credit_amt)||0:0;
       const bal=parseFloat(t.running_balance)||0;
       // For cash/UPI bills — show debit but balance stays 0 (not on credit)
-      const balDisplay=isCredit||t.txn_type==="Payment"
+      const balDisplay=isCredit||t.txn_type==="Payment"||(isReturn&&t.payment_mode==="CREDIT")
         ?`₹${Math.abs(bal).toFixed(2)} ${bal>0?"Dr":"Cr"}`
         :"—";
-      return `<tr style="${isSales&&!isCredit?"background:#f9fff9;":""}">
+      return `<tr style="${isReturn?"background:#fff4f4;":(isSales&&!isCredit?"background:#f9fff9;":"")}">
         <td style="padding:8px 10px;font-size:14px;">${new Date(t.txn_date).toLocaleDateString("en-IN")}</td>
-        <td style="text-align:left;font-size:14px;">${isSales?"Sales a/c":"Cash A/c"}</td>
-        <td style="font-size:14px;">${isSales?"Q Sales ("+t.payment_mode+")":"Receipt"}</td>
-        <td style="font-size:14px;">${isSales?"Q-"+t.ref_no:"Rcpt-"+t.ref_no}</td>
+        <td style="text-align:left;font-size:14px;">${isSales?"Sales a/c":(isReturn?"Sales Return a/c":"Cash A/c")}</td>
+        <td style="font-size:14px;">${isSales?"Q Sales ("+t.payment_mode+")":(isReturn?"Q Return ("+t.payment_mode+")":"Receipt")}</td>
+        <td style="font-size:14px;">${isSales?"Q-"+t.ref_no:(isReturn?"R-"+t.ref_no:"Rcpt-"+t.ref_no)}</td>
         <td style="color:#dc3545;font-weight:bold;font-size:15px;">${debit>0?"₹"+debit.toFixed(2):""}</td>
         <td style="color:#28a745;font-weight:bold;font-size:15px;">${credit>0?"₹"+credit.toFixed(2):""}</td>
         <td style="font-weight:bold;font-size:15px;color:${bal>0?"#dc3545":"#28a745"};">${balDisplay}</td>
@@ -415,7 +416,7 @@ function loadStatement(){
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0;">
           <div style="background:#e8f4fd;padding:10px 14px;border-radius:8px;flex:1;text-align:center;min-width:120px;">
-            <div style="font-size:12px;color:#888;">Total Sales</div>
+            <div style="font-size:12px;color:#888;">Total Sales (after returns)</div>
             <div style="font-size:17px;font-weight:bold;color:#007bff;">₹${totalSales.toFixed(2)}</div>
           </div>
           <div style="background:#e8f7ef;padding:10px 14px;border-radius:8px;flex:1;text-align:center;min-width:120px;">
@@ -473,16 +474,17 @@ function buildStmtPrintArea(d, rows, dateRange, totalDebit, totalCredit, closing
   const totalPaid=parseFloat(d.total_paid||0);
   const tbody=rows.map(t=>{
     const isSales=t.txn_type==="Sales";
+    const isReturn=t.txn_type==="Return";
     const debit=isSales?parseFloat(t.debit_amt)||0:0;
-    const credit=t.txn_type==="Payment"?parseFloat(t.credit_amt)||0:0;
+    const credit=(t.txn_type==="Payment"||isReturn)?parseFloat(t.credit_amt)||0:0;
     const bal=parseFloat(t.running_balance)||0;
-    const balDisplay=(isSales&&t.payment_mode==="CREDIT")||t.txn_type==="Payment"
+    const balDisplay=(isSales&&t.payment_mode==="CREDIT")||t.txn_type==="Payment"||(isReturn&&t.payment_mode==="CREDIT")
       ?`₹${Math.abs(bal).toFixed(2)} ${bal>0?"Dr":"Cr"}`:"—";
     return `<tr>
       <td style="padding:7px 8px;border:1px solid #333;font-size:13px;">${new Date(t.txn_date).toLocaleDateString("en-IN")}</td>
-      <td style="border:1px solid #333;font-size:13px;">${isSales?"Sales a/c":"Cash A/c"}</td>
-      <td style="border:1px solid #333;font-size:13px;">${isSales?"Q Sales ("+t.payment_mode+")":"Receipt"}</td>
-      <td style="border:1px solid #333;font-size:13px;">${isSales?"Q-"+t.ref_no:"Rcpt-"+t.ref_no}</td>
+      <td style="border:1px solid #333;font-size:13px;">${isSales?"Sales a/c":(isReturn?"Sales Return a/c":"Cash A/c")}</td>
+      <td style="border:1px solid #333;font-size:13px;">${isSales?"Q Sales ("+t.payment_mode+")":(isReturn?"Q Return ("+t.payment_mode+")":"Receipt")}</td>
+      <td style="border:1px solid #333;font-size:13px;">${isSales?"Q-"+t.ref_no:(isReturn?"R-"+t.ref_no:"Rcpt-"+t.ref_no)}</td>
       <td style="border:1px solid #333;text-align:right;font-size:13px;font-weight:bold;">${debit>0?"₹"+debit.toFixed(2):""}</td>
       <td style="border:1px solid #333;text-align:right;font-size:13px;font-weight:bold;">${credit>0?"₹"+credit.toFixed(2):""}</td>
       <td style="border:1px solid #333;text-align:right;font-size:13px;font-weight:bold;">${balDisplay}</td>

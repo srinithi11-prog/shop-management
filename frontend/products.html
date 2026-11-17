@@ -79,6 +79,7 @@
         </div>
       </div>
       <div class="f"><label>HSN Code</label><input id="phsn" placeholder="e.g. 6907"></div>
+      <div class="f"><label>Wholesale Price ₹</label><input type="number" id="pwholesale" placeholder="Optional"></div>
     </div>
     <div style="background:#f0f8ff;border:1px solid #007bff;border-radius:8px;padding:14px;margin-bottom:12px;">
       <p style="font-size:13px;font-weight:bold;color:#007bff;margin-bottom:10px;">📦 Initial Stock</p>
@@ -158,6 +159,7 @@
         </div>
       </div>
         <div class="f"><label>HSN Code</label><input id="ePhsn"></div>
+        <div class="f"><label>Wholesale Price ₹</label><input type="number" id="ePwholesale" placeholder="Not set"></div>
       </div>
       <div style="margin-top:10px;display:flex;gap:8px;">
         <button class="success" onclick="saveEditProduct()">💾 Save Changes</button>
@@ -311,6 +313,10 @@ function applyFilter(){
   renderPage();
 }
 
+function wChip(p){
+  const w=parseFloat(p.wholesale_price);
+  return w>0?`<span style="background:#f3eeff;color:#6f42c1;padding:2px 6px;border-radius:4px;margin:1px;display:inline-block;font-size:11px;font-weight:bold;" title="Wholesale price">W ₹${w.toFixed(2)}</span>`:"";
+}
 function renderPage(){
   const start=(currentPage-1)*PAGE_SIZE;
   const pageData=filteredProducts.slice(start,start+PAGE_SIZE);
@@ -342,9 +348,9 @@ function renderPage(){
       sEl.innerText=total;
       sEl.style.color=total===0?"#dc3545":total<=5?"#fd7e14":"#28a745";
       sEl.style.fontWeight="bold";
-      pEl.innerHTML=batches.length
+      pEl.innerHTML=wChip(p)+(batches.length
         ?batches.map(b=>`<span style="background:#e8f4fd;padding:2px 6px;border-radius:4px;margin:1px;display:inline-block;font-size:11px;">₹${parseFloat(b.mrp).toFixed(2)}(${b.remaining_quantity})</span>`).join("")
-        :`<span style="color:#aaa;">No stock</span>`;
+        :`<span style="color:#aaa;">No stock</span>`);
     });
   });
   renderPagination();
@@ -385,6 +391,7 @@ function showProductModal(editMode){
     <div><b>Name:</b> ${p.name}</div>
     <div><b>Brand:</b> ${p.brand||"—"}</div>
     <div><b>HSN:</b> ${p.hsn_code||"—"}</div>
+    <div><b>Wholesale ₹:</b> ${(p.wholesale_price!=null&&p.wholesale_price!=="")?parseFloat(p.wholesale_price).toFixed(2):"not set"}</div>
   `;
 
   // Fill edit fields
@@ -392,6 +399,7 @@ function showProductModal(editMode){
   document.getElementById("ePname").value=p.name;
   document.getElementById("ePbrand").value=p.brand||"";
   document.getElementById("ePhsn").value=p.hsn_code||"";
+  document.getElementById("ePwholesale").value=(p.wholesale_price!=null&&p.wholesale_price!=="")?parseFloat(p.wholesale_price):"";
 
   toggleEditSection(editMode);
   loadModalBatches(p.product_id);
@@ -416,19 +424,20 @@ function saveEditProduct(){
   const name=document.getElementById("ePname").value.trim();
   if(!name){alert("Name required");return;}
   fetch(API+"/product/"+p.product_id,{method:"PUT",headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({name,product_code:document.getElementById("ePcode").value.trim(),brand:document.getElementById("ePbrand").value.trim(),hsn_code:document.getElementById("ePhsn").value.trim()})})
+    body:JSON.stringify({name,product_code:document.getElementById("ePcode").value.trim(),brand:document.getElementById("ePbrand").value.trim(),hsn_code:document.getElementById("ePhsn").value.trim(),wholesale_price:document.getElementById("ePwholesale").value.trim()})})
   .then(r=>r.json()).then(d=>{
     if(d.error){alert("Error: "+d.error);return;}
     alert("✅ Product updated!");
     // Update local cache
-    p.name=name;p.product_code=document.getElementById("ePcode").value.trim();p.brand=document.getElementById("ePbrand").value.trim();p.hsn_code=document.getElementById("ePhsn").value.trim();
+    p.name=name;p.product_code=document.getElementById("ePcode").value.trim();p.brand=document.getElementById("ePbrand").value.trim();p.hsn_code=document.getElementById("ePhsn").value.trim();p.wholesale_price=document.getElementById("ePwholesale").value.trim()||null;
     toggleEditSection(false);
     document.getElementById("modalProdTitle").innerText=name;
     document.getElementById("viewInfo").innerHTML=`
       <div><b>Code:</b> <span class="code-badge">${p.product_code||"—"}</span></div>
       <div><b>Name:</b> ${p.name}</div>
       <div><b>Brand:</b> ${p.brand||"—"}</div>
-      <div><b>HSN:</b> ${p.hsn_code||"—"}</div>`;
+      <div><b>HSN:</b> ${p.hsn_code||"—"}</div>
+    <div><b>Wholesale ₹:</b> ${(p.wholesale_price!=null&&p.wholesale_price!=="")?parseFloat(p.wholesale_price).toFixed(2):"not set"}</div>`;
     loadProducts();
   });
 }
@@ -486,13 +495,13 @@ function addProduct(){
   if(!name){alert("Enter product name");return;}
   if(!purchase||!mrp||!qty){alert("Enter purchase price, selling price and quantity");return;}
   fetch(API+"/products",{method:"POST",headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({product_code:code,name,brand:document.getElementById("pbrand").value.trim(),hsn_code:document.getElementById("phsn").value.trim()})})
+    body:JSON.stringify({product_code:code,name,brand:document.getElementById("pbrand").value.trim(),hsn_code:document.getElementById("phsn").value.trim(),wholesale_price:document.getElementById("pwholesale").value.trim()})})
   .then(r=>r.json()).then(d=>{
     if(d.error){alert("Error: "+d.error+" (Code may already exist)");return;}
     fetch(API+"/add-batch",{method:"POST",headers:{"Content-Type":"application/json"},
       body:JSON.stringify({product_id:d.product_id,purchase_price:parseFloat(purchase),mrp:parseFloat(mrp),quantity:parseInt(qty),min_stock:parseInt(document.getElementById("pmin").value)||5})})
     .then(()=>{
-      ["pcode","pname","pbrand","phsn","ppurchase","pmrp","pqty"].forEach(id=>document.getElementById(id).value="");
+      ["pcode","pname","pbrand","phsn","pwholesale","ppurchase","pmrp","pqty"].forEach(id=>document.getElementById(id).value="");
       document.getElementById("pmin").value="5";
       loadProducts();loadWorth();
     });

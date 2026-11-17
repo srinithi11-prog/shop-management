@@ -231,11 +231,11 @@ function renderResults(data){
   div.innerHTML=`<table>
     <thead><tr><th>Q No</th><th>Customer</th><th>Date</th><th>Payment</th><th>Amount</th><th>Status</th><th>Action</th></tr></thead>
     <tbody>${data.map(b=>`<tr>
-      <td style="color:#dc3545;font-weight:bold;">Q-${b.bill_id}</td>
+      <td style="color:#dc3545;font-weight:bold;">${b.bill_type==="RETURN"?"R-":"Q-"}${b.bill_id}${typeBadge(b)}</td>
       <td style="color:#dc3545;font-weight:bold;">${b.customer_name}</td>
       <td>${new Date(b.bill_date).toLocaleDateString("en-IN")}</td>
       <td>${b.payment_mode||"-"}</td>
-      <td>₹${parseFloat(b.grand_total).toFixed(2)}</td>
+      <td>${b.bill_type==="RETURN"?"−":""}₹${Math.abs(parseFloat(b.grand_total)).toFixed(2)}</td>
       <td>${b.cancelled?'<span class="tag-cancelled">Cancelled</span>':'<span class="tag-active">Active</span>'}</td>
       <td><button onclick="viewBill(${b.bill_id})" style="padding:4px 10px;font-size:12px;">View</button></td>
     </tr>`).join("")}</tbody>
@@ -257,13 +257,25 @@ function viewBill(bill_id){
     buildAlterRows(b);
     hideAlterSection();
     document.getElementById("statusTag").innerHTML=b.cancelled?'<span class="tag-cancelled">CANCELLED</span>':'<span class="tag-active">ACTIVE</span>';
-    document.getElementById("alterBtn").style.display=b.cancelled?"none":"inline-block";
+    document.getElementById("alterBtn").style.display=(b.cancelled||b.bill_type==="RETURN")?"none":"inline-block";
     document.getElementById("cancelBtn").style.display=b.cancelled?"none":"inline-block";
     document.getElementById("billDetailCard").style.display="block";
     document.getElementById("billDetailCard").scrollIntoView({behavior:"smooth"});
   });
 }
 // Helper function to convert number to words
+// ── Bill type wording (Retail / Wholesale / Return) ──
+function billTitle(b){return b.bill_type==="RETURN"?"SALES RETURN":(b.bill_type==="WHOLESALE"?"WHOLESALE BILL":"Q BILL");}
+function billNoLabel(b){return b.bill_type==="RETURN"?"Return No":"Q Bill No";}
+function billNoPrefix(b){return b.bill_type==="RETURN"?"R-":"Q-";}
+function payLabel(b){return b.bill_type==="RETURN"?"Refund Mode":"Payment Terms";}
+function payText(b){const m=b.payment_mode||"Cash";return (b.bill_type==="RETURN"&&m==="CREDIT")?"Credit adjusted":m;}
+function netLabel(b){return b.bill_type==="RETURN"?"Refund Amount":"Net Amount";}
+function typeBadge(b){
+  if(b.bill_type==="RETURN") return ' <span style="background:#dc3545;color:#fff;font-size:10px;padding:1px 6px;border-radius:8px;">RETURN</span>';
+  if(b.bill_type==="WHOLESALE") return ' <span style="background:#6f42c1;color:#fff;font-size:10px;padding:1px 6px;border-radius:8px;">WHOLESALE</span>';
+  return "";
+}
 function toWords(n){
   const a=["","One","Two","Three","Four","Five","Six","Seven","Eight","Nine","Ten","Eleven","Twelve","Thirteen","Fourteen","Fifteen","Sixteen","Seventeen","Eighteen","Nineteen"];
   const t=["","","Twenty","Thirty","Forty","Fifty","Sixty","Seventy","Eighty","Ninety"];
@@ -316,7 +328,7 @@ function buildInvoiceDisplay(b){
           <div style="font-family:'Cinzel Decorative', 'Montserrat', 'Playfair Display', serif;font-size:28px;font-weight:900;letter-spacing:3px;text-transform:uppercase;background:linear-gradient(45deg, #007bff, #00b4d8);-webkit-background-clip:text;-webkit-text-fill-color:transparent;text-shadow:2px 2px 4px rgba(0,0,0,0.15);padding:2px 0;">${SHOP}</div>
           <div style="font-size:11px;font-weight:700;letter-spacing:2px;color:#6c757d;text-transform:uppercase;margin-top:2px;">PREMIUM SANITARYWARES &amp; TILES</div>
         </div>
-        <div style="font-size:13px;font-weight:bold;letter-spacing:2px;margin-top:2px;color:#333;">Q BILL</div>
+        <div style="font-size:13px;font-weight:bold;letter-spacing:2px;margin-top:2px;color:#333;">${billTitle(b)}</div>
       </div>
       
       <table style="width:100%;border-collapse:collapse;border:1px solid #000;margin-bottom:-1px;">
@@ -325,8 +337,8 @@ function buildInvoiceDisplay(b){
             <b>To:</b> <span style="color:#dc3545;font-weight:bold;">${custName}</span>
           </td>
           <td style="width:45%;border:1px solid #000;padding:6px;text-align:left;">
-            <div><b>Q Bill No :</b> <span style="color:#dc3545;font-weight:bold;">Q-${billNo}</span></div>
-            <div><b>Payment Terms :</b> ${b.payment_mode||"Cash"}</div>
+            <div><b>${billNoLabel(b)} :</b> <span style="color:#dc3545;font-weight:bold;">${billNoPrefix(b)}${billNo}</span></div>
+            <div><b>${payLabel(b)} :</b> ${payText(b)}</div>
             <div><b>Date :</b> ${dateStr}</div>
           </td>
         </tr>
@@ -355,7 +367,7 @@ function buildInvoiceDisplay(b){
             <td style="border:1px solid #000;padding:4px;text-align:right;">${roundedAdd.toFixed(2)}</td>
           </tr>
           <tr>
-            <td colspan="3" style="border:1px solid #000;padding:4px;text-align:right;font-weight:bold;font-size:14px;">Net Amount :</td>
+            <td colspan="3" style="border:1px solid #000;padding:4px;text-align:right;font-weight:bold;font-size:14px;">${netLabel(b)} :</td>
             <td style="border:1px solid #000;padding:4px;text-align:right;font-weight:bold;font-size:14px;color:#28a745;">₹${netAmount.toFixed(2)}</td>
           </tr>
         </tfoot>
@@ -456,13 +468,13 @@ table.main-tbl th{font-size:8.5pt;font-weight:bold;text-align:center;}
       <div class="shop-subtitle">PREMIUM SANITARYWARES &amp; TILES</div>
     </div>
   </div>
-  <div class="bill-type">Q BILL</div>
+  <div class="bill-type">${billTitle(b)}</div>
   <table class="meta-box">
     <tr>
       <td style="width:55%;"><b>To :</b> <span class="highlight-red">${custName}</span></td>
       <td style="width:45%;">
-        <b>Q Bill No :</b> <span class="highlight-red">Q-${billNo}</span><br>
-        <b>Payment Terms :</b> ${b.payment_mode||"Cash"}<br>
+        <b>${billNoLabel(b)} :</b> <span class="highlight-red">${billNoPrefix(b)}${billNo}</span><br>
+        <b>${payLabel(b)} :</b> ${payText(b)}<br>
         <b>Date :</b> ${dateStr}
       </td>
     </tr>
@@ -489,7 +501,7 @@ table.main-tbl th{font-size:8.5pt;font-weight:bold;text-align:center;}
         <td style="text-align:right;">${roundedAdd.toFixed(2)}</td>
       </tr>
       <tr>
-        <td colspan="3" style="text-align:right;font-weight:bold;font-size:9.5pt;">Net Amount :</td>
+        <td colspan="3" style="text-align:right;font-weight:bold;font-size:9.5pt;">${netLabel(b)} :</td>
         <td style="text-align:right;font-weight:bold;font-size:9.5pt;color:#28a745;">${netAmount.toFixed(2)}</td>
       </tr>
     </tbody>
@@ -583,16 +595,12 @@ function loadAlterBatches(rowId,pid,curBatch){
   if(!pid)return;
   const sel=document.getElementById("arbatch_"+rowId);
   sel.innerHTML=`<option value="">Loading...</option>`;
-  fetch(API+"/batches/"+pid).then(r=>r.json()).then(batches=>{
+  fetch(API+"/batches/"+pid+(curBatch?("?include="+curBatch):"")).then(r=>r.json()).then(batches=>{
     if(!batches.length){sel.innerHTML=`<option value="">No stock</option>`;return;}
     sel.innerHTML=`<option value="">— Select price —</option>`;
     batches.forEach(b=>{
       sel.innerHTML+=`<option value="${b.batch_id}" data-mrp="${b.mrp}" ${b.batch_id==curBatch?"selected":""}>₹${parseFloat(b.mrp).toFixed(2)} | Stk:${b.remaining_quantity}</option>`;
     });
-    if(curBatch){
-      const opt=sel.querySelector(`option[value="${curBatch}"]`);
-      if(opt&&opt.dataset.mrp) document.getElementById("arrate_"+rowId).value=parseFloat(opt.dataset.mrp).toFixed(2);
-    }
   });
 }
 function onAB(rowId){

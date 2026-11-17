@@ -101,7 +101,19 @@
         color: #28a745 !important;
       }
     }
-  </style>
+  
+    .type-switch{display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;}
+    .type-switch button{background:#e9ecef;color:#333;border:2px solid transparent;padding:8px 18px;border-radius:20px;font-size:13px;font-weight:bold;cursor:pointer;}
+    .type-switch button.active[data-type="RETAIL"]{background:#007bff;color:#fff;}
+    .type-switch button.active[data-type="WHOLESALE"]{background:#6f42c1;color:#fff;}
+    .type-switch button.active[data-type="RETURN"]{background:#dc3545;color:#fff;}
+    .type-hint{font-size:12px;color:#666;margin-bottom:8px;}
+    body.mode-return #formTitle{color:#dc3545!important;}
+    body.mode-wholesale #formTitle{color:#6f42c1!important;}
+    .ret-col{display:none;}
+    body.mode-return .ret-col{display:table-cell;}
+    .ret-col input[type=checkbox]{width:auto;}
+</style>
 </head>
 <body>
 <div class="topbar"><h1>🧾 Sales Billing</h1><span id="fyLabel" style="font-size:13px;opacity:0.85;"></span></div>
@@ -125,11 +137,17 @@
 </div>
 <div class="container">
   <div class="card">
-    <h2 style="margin-bottom:14px;color:#007bff;">Create Sales Bill</h2>
+    <h2 id="formTitle" style="margin-bottom:10px;color:#007bff;">Create Sales Bill</h2>
+    <div class="type-switch" id="typeSwitch">
+      <button type="button" data-type="RETAIL" class="active" onclick="setBillType('RETAIL')">🛒 Retail</button>
+      <button type="button" data-type="WHOLESALE" onclick="setBillType('WHOLESALE')">📦 Wholesale</button>
+      <button type="button" data-type="RETURN" onclick="setBillType('RETURN')">↩️ Return</button>
+    </div>
+    <div class="type-hint" id="typeHint"></div>
     <div class="row">
-      <div class="f" style="width:140px;"><label>Payment</label>
+      <div class="f" style="width:140px;"><label id="payLabel">Payment</label>
         <select id="paymentType" onchange="onPaymentChange()">
-          <option value="Cash">Cash</option><option value="UPI">UPI</option><option value="CREDIT">Credit</option>
+          <option value="Cash">Cash</option><option value="UPI">UPI</option><option value="CREDIT" id="optCredit">Credit</option>
         </select>
       </div>
       <div class="f" style="width:160px;"><label>Date</label>
@@ -177,21 +195,21 @@
           <th style="width:32px;">#</th><th style="width:105px;">Code</th>
           <th style="width:165px;">Name</th><th style="width:160px;">Price/Batch</th>
           <th style="width:58px;">Qty</th><th style="width:80px;">Rate ₹</th>
-          <th style="width:88px;">Amount ₹</th><th style="width:36px;" class="no-print">✕</th>
+          <th style="width:88px;">Amount ₹</th><th style="width:70px;" class="ret-col">Restock</th><th style="width:36px;" class="no-print">✕</th>
         </tr></thead>
         <tbody id="billBody"></tbody>
       </table>
     </div>
     <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
       <button onclick="addRow()">➕ Add Row</button>
-      <button class="success" onclick="submitBill()">✅ Create Bill</button>
+      <button class="success" id="submitBtn" onclick="submitBill()">✅ Create Bill</button>
     </div>
     <div class="grand-total" id="grandTotal">Grand Total: ₹0.00</div>
   </div>
   <div class="card" id="invoiceCard" style="display:none;">
     <div class="no-print" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
       <div>
-        <h2 style="color:#28a745;">✅ Bill Created</h2>
+        <h2 id="createdTitle" style="color:#28a745;">✅ Bill Created</h2>
         <div style="font-size:16px;font-weight:bold;color:#007bff;margin-top:4px;" id="createdBillNo"></div>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
@@ -233,7 +251,7 @@ window.addEventListener("DOMContentLoaded",()=>{
   document.getElementById("customDate").value=new Date().toISOString().split("T")[0];
   fetch(API+"/active-year").then(r=>r.json()).then(fy=>{if(fy)document.getElementById("fyLabel").innerText="FY: "+fy.year_label;}).catch(()=>{});
   loadBillStats();
-  fetch(API+"/products").then(r=>r.json()).then(d=>{allProducts=d;addRow();}).catch(()=>addRow());
+  fetch(API+"/products").then(r=>r.json()).then(d=>{allProducts=d;addRow();restoreBillType();}).catch(()=>addRow());
   loadRegular();
   document.addEventListener("mousedown",e=>{
     const pd=document.getElementById("prodDrop");
@@ -243,7 +261,44 @@ window.addEventListener("DOMContentLoaded",()=>{
   });
 });
 function toggleDateInput(){const c=document.getElementById("dateOption").value==="custom";document.getElementById("customDateBox").style.display=c?"flex":"none";document.getElementById("todayBox").style.display=c?"none":"flex";}
-function onPaymentChange(){if(document.getElementById("paymentType").value==="CREDIT"&&!document.getElementById("custId").value){document.getElementById("saveRegular").checked=true;document.getElementById("saveRegular").disabled=true;}else{document.getElementById("saveRegular").disabled=false;}}
+// ── BILL TYPE: Retail / Wholesale / Return ─────────────
+let billType="RETAIL";
+const TYPE_INFO={
+  RETAIL:{title:"Create Sales Bill",hint:"",btn:"✅ Create Bill",pay:"Payment",credit:"Credit"},
+  WHOLESALE:{title:"Create Wholesale Bill",hint:"Rates fill from each product's wholesale price. You can still change them.",btn:"✅ Create Wholesale Bill",pay:"Payment",credit:"Credit"},
+  RETURN:{title:"Create Sales Return",hint:"Pick the product, then the stock batch it goes back into. Untick Restock for broken items. Refund as Credit reduces the customer's balance.",btn:"✅ Create Return",pay:"Refund as",credit:"Credit (reduce balance)"}
+};
+function rowsHaveData(){
+  for(let i=1;i<=rowCount;i++){ const p=document.getElementById("ppid_"+i); if(p&&p.value) return true; }
+  return false;
+}
+function restoreBillType(){
+  let t=null; try{t=sessionStorage.getItem("billType");}catch(e){}
+  if(t&&t!=="RETAIL"&&TYPE_INFO[t]) setBillType(t,true);
+}
+function setBillType(t,silent){
+  if(t===billType||!TYPE_INFO[t]) return;
+  const crossing=(t==="RETURN")||(billType==="RETURN");
+  if(crossing&&!silent&&rowsHaveData()&&!confirm("Switching clears the items entered so far. Continue?")) return;
+  billType=t;
+  try{sessionStorage.setItem("billType",t);}catch(e){}
+  const info=TYPE_INFO[t];
+  document.body.classList.toggle("mode-return",t==="RETURN");
+  document.body.classList.toggle("mode-wholesale",t==="WHOLESALE");
+  document.querySelectorAll("#typeSwitch button").forEach(x=>x.classList.toggle("active",x.dataset.type===t));
+  document.getElementById("formTitle").innerText=info.title;
+  document.getElementById("typeHint").innerText=info.hint;
+  document.getElementById("submitBtn").innerText=info.btn;
+  document.getElementById("payLabel").innerText=info.pay;
+  document.getElementById("optCredit").innerText=info.credit;
+  if(crossing){
+    document.getElementById("billBody").innerHTML=""; rowCount=0; addRow(); calcGT();
+  } else {   // Retail <-> Wholesale: re-price rows that already have a price/batch chosen
+    for(let i=1;i<=rowCount;i++){ const s=document.getElementById("batch_"+i); if(document.getElementById("billrow_"+i)&&s&&s.value) onBC(i); }
+  }
+  onPaymentChange();
+}
+function onPaymentChange(){if(billType!=="RETURN"&&document.getElementById("paymentType").value==="CREDIT"&&!document.getElementById("custId").value){document.getElementById("saveRegular").checked=true;document.getElementById("saveRegular").disabled=true;}else{document.getElementById("saveRegular").disabled=false;}}
 function loadRegular(){fetch(API+"/regular-customers").then(r=>r.json()).then(d=>{allRegular=d;});}
 function loadBillStats(){
   fetch(API+"/bill-stats").then(r=>r.json()).then(d=>{
@@ -354,13 +409,17 @@ function pickProduct(e,pid,name,code,ctx){
   else{document.getElementById("pcode_"+id).value=code;document.getElementById("pname_"+id).value=name;document.getElementById("ppid_"+id).value=pid;document.getElementById("ptag_"+id).innerText="✅ "+name;hideProdDrop();loadBatches("batch_"+id,pid);}
   setTimeout(()=>{const q=document.getElementById((ctx==="alter"?"ar":"")+"qty_"+id);if(q)q.focus();},50);
 }
-function loadBatches(selId,pid){
+function loadBatches(selId,pid,curBatch){
   const sel=document.getElementById(selId);if(!sel)return;
+  // A return can go back into ANY batch of the product, even one that is sold out
+  const isReturn=(billType==="RETURN"&&selId.indexOf("batch_")===0);
   sel.innerHTML=`<option value="">Loading...</option>`;
-  fetch(API+"/batches/"+pid).then(r=>r.json()).then(batches=>{
-    if(!batches.length){sel.innerHTML=`<option value="">No stock</option>`;return;}
-    sel.innerHTML=`<option value="">— Select price —</option>`;
-    batches.forEach(b=>{sel.innerHTML+=`<option value="${b.batch_id}" data-mrp="${b.mrp}">₹${parseFloat(b.mrp).toFixed(2)} | Stk:${b.remaining_quantity}</option>`;});
+  const url=isReturn?(API+"/all-batches/"+pid):(API+"/batches/"+pid+(curBatch?("?include="+curBatch):""));
+  fetch(url).then(r=>r.json()).then(batches=>{
+    if(!batches.length){sel.innerHTML=`<option value="">${isReturn?"No stock batch for this product":"No stock"}</option>`;return;}
+    sel.innerHTML=isReturn?"":`<option value="">— Select price —</option>`;
+    batches.forEach((b,ix)=>{sel.innerHTML+=`<option value="${b.batch_id}" data-mrp="${b.mrp}" ${(b.batch_id==curBatch||(isReturn&&ix===0))?"selected":""}>₹${parseFloat(b.mrp).toFixed(2)} | Stk:${b.remaining_quantity}</option>`;});
+    if(isReturn){ onBC(parseInt(selId.split("_")[1])); }
   });
 }
 function esc(s){return (s||"").replace(/'/g,"\\'").replace(/"/g,'\\"');}
@@ -375,11 +434,25 @@ function addRow(){
     <td><input type="number" id="qty_${id}" value="1" min="1" oninput="calcRow(${id})" onkeydown="if(event.key==='Enter'){event.preventDefault();document.getElementById('rate_'+${id}).focus();}"></td>
     <td><input type="number" id="rate_${id}" placeholder="0.00" oninput="calcRow(${id})" onkeydown="if(event.key==='Enter'){event.preventDefault();document.getElementById('amt_'+${id}).focus();}"></td>
     <td><input type="number" id="amt_${id}" placeholder="0.00" oninput="calcGT()" onkeydown="if(event.key==='Enter'){event.preventDefault();addRow();}"></td>
+    <td class="ret-col"><input type="checkbox" id="restock_${id}" checked title="Tick if the item goes back into stock"></td>
     <td><button class="danger" onclick="delRow(${id})" style="padding:3px 7px;font-size:11px;">✕</button></td>`;
   document.getElementById("billBody").appendChild(tr);
   document.getElementById("pcode_"+id).focus();
 }
-function onBC(id){const sel=document.getElementById("batch_"+id);const opt=sel.options[sel.selectedIndex];if(!opt||!opt.dataset.mrp)return;document.getElementById("rate_"+id).value=parseFloat(opt.dataset.mrp).toFixed(2);calcRow(id);}
+function onBC(id){
+  const sel=document.getElementById("batch_"+id);const opt=sel.options[sel.selectedIndex];
+  if(!opt||!opt.dataset.mrp)return;
+  let rate=parseFloat(opt.dataset.mrp);
+  const tag=document.getElementById("ptag_"+id);
+  const pid=document.getElementById("ppid_"+id).value;
+  const p=allProducts.find(x=>String(x.product_id)===String(pid));
+  if(billType==="WHOLESALE"&&p){
+    const w=parseFloat(p.wholesale_price);
+    if(w>0){ rate=w; tag.innerText="✅ "+p.name+" (wholesale ₹"+w.toFixed(2)+")"; }
+    else { tag.innerText="⚠ "+p.name+" - no wholesale price set, using retail"; }
+  } else if(p){ tag.innerText="✅ "+p.name; }
+  document.getElementById("rate_"+id).value=rate.toFixed(2);calcRow(id);
+}
 function calcRow(id){const q=parseFloat(document.getElementById("qty_"+id).value)||0;const r=parseFloat(document.getElementById("rate_"+id).value)||0;document.getElementById("amt_"+id).value=(q*r).toFixed(2);calcGT();}
 function delRow(id){const el=document.getElementById("billrow_"+id);if(el)el.remove();calcGT();}
 function calcGT(){let t=0;for(let i=1;i<=rowCount;i++){const el=document.getElementById("amt_"+i);if(el)t+=parseFloat(el.value)||0;}document.getElementById("grandTotal").innerText="Grand Total: ₹"+t.toFixed(2);}
@@ -394,17 +467,22 @@ async function submitBill(){
     if(!document.getElementById("billrow_"+i)||!bEl||!bEl.value)continue;
     const qty=parseInt(qEl.value)||1;const rate=parseFloat(rEl.value)||0;
     if(qty<=0||rate<=0)continue;
-    items.push({product_id:pEl.value,batch_id:bEl.value,quantity:qty,rate,total_amount:parseFloat(aEl.value)||rate*qty});
+    const rsEl=document.getElementById("restock_"+i);
+    items.push({product_id:pEl.value,batch_id:bEl.value,quantity:qty,rate,total_amount:parseFloat(aEl.value)||rate*qty,restock:rsEl?rsEl.checked:true});
   }
   if(!items.length){alert("Add at least one item with product and price selected");return;}
   const body={items,payment_mode,customer_id:customer_id||null,bill_date};
+  if(billType==="RETURN"){
+    body.refund_mode=payment_mode;
+    if(payment_mode==="CREDIT"&&!customer_id){alert("To reduce a customer's credit, pick the regular customer first (or choose Cash / UPI).");return;}
+  } else { body.bill_type=billType; }
   if(!customer_id){
     const wname=document.getElementById("walkinName").value.trim();
     if(!wname){alert("Enter customer name");return;}
     body.walkin_name=wname;body.walkin_phone=document.getElementById("walkinPhone").value.trim();
     body.save_as_regular=document.getElementById("saveRegular").checked||(payment_mode==="CREDIT");
   }
-  fetch(API+"/create-bill-multi",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)})
+  fetch(API+(billType==="RETURN"?"/create-return":"/create-bill-multi"),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)})
   .then(r=>r.json()).then(d=>{
     if(d.error){alert("Error: "+d.error);return;}
     if(!customer_id&&body.save_as_regular&&d.customer_id){
@@ -415,13 +493,28 @@ async function submitBill(){
 }
 function showInvoice(bill_id){
   fetch(API+"/bill/"+bill_id).then(r=>r.json()).then(b=>{
-    currentBill=b;buildInvoice(b,"invoiceArea");
+    currentBill=b;buildInvoice(b,"invoiceArea");buildAlterRows(b);
     document.getElementById("alterSection").style.display="none";
     document.getElementById("invoiceCard").style.display="block";
+    const isRet=b.bill_type==="RETURN";
+    const ab=document.querySelector('#invoiceCard button[onclick="showAlterSection()"]'); if(ab) ab.style.display=isRet?"none":"";
+    const ct=document.getElementById("createdTitle"); if(ct) ct.innerText=isRet?"✅ Return Created":(b.bill_type==="WHOLESALE"?"✅ Wholesale Bill Created":"✅ Bill Created");
     const bnEl=document.getElementById("createdBillNo");
-    if(bnEl) bnEl.innerText="Q No: "+b.bill_no;
+    if(bnEl) bnEl.innerText=(isRet?"Return No: R-":"Q No: ")+b.bill_no;
     document.getElementById("invoiceCard").scrollIntoView({behavior:"smooth"});
   });
+}
+// ── Bill type wording (Retail / Wholesale / Return) ──
+function billTitle(b){return b.bill_type==="RETURN"?"SALES RETURN":(b.bill_type==="WHOLESALE"?"WHOLESALE BILL":"Q BILL");}
+function billNoLabel(b){return b.bill_type==="RETURN"?"Return No":"Q Bill No";}
+function billNoPrefix(b){return b.bill_type==="RETURN"?"R-":"Q-";}
+function payLabel(b){return b.bill_type==="RETURN"?"Refund Mode":"Payment Terms";}
+function payText(b){const m=b.payment_mode||"Cash";return (b.bill_type==="RETURN"&&m==="CREDIT")?"Credit adjusted":m;}
+function netLabel(b){return b.bill_type==="RETURN"?"Refund Amount":"Net Amount";}
+function typeBadge(b){
+  if(b.bill_type==="RETURN") return ' <span style="background:#dc3545;color:#fff;font-size:10px;padding:1px 6px;border-radius:8px;">RETURN</span>';
+  if(b.bill_type==="WHOLESALE") return ' <span style="background:#6f42c1;color:#fff;font-size:10px;padding:1px 6px;border-radius:8px;">WHOLESALE</span>';
+  return "";
 }
 function toWords(n){
   const a=["","One","Two","Three","Four","Five","Six","Seven","Eight","Nine","Ten","Eleven","Twelve","Thirteen","Fourteen","Fifteen","Sixteen","Seventeen","Eighteen","Nineteen"];
@@ -476,7 +569,7 @@ function buildInvoice(b, targetId) {
           <div class="shop-title-styled">${SHOP}</div>
           <div class="shop-subtitle-styled">PREMIUM SANITARYWARES & TILES</div>
         </div>
-        <div style="font-size:15px; font-weight:bold; font-family:Arial, sans-serif; margin-top:6px;">Q BILL</div>
+        <div style="font-size:15px; font-weight:bold; font-family:Arial, sans-serif; margin-top:6px;">${billTitle(b)}</div>
       </div>
       
       <table style="width:100%; border-collapse:collapse; border:1px solid #000; margin-bottom:-1px; font-family:Arial, sans-serif; font-size:13px;">
@@ -485,8 +578,8 @@ function buildInvoice(b, targetId) {
             <b>To :</b> <span style="color:#b30000; font-weight:bold;">${custName}</span>
           </td>
           <td style="width:48%; border:1px solid #000; padding:6px 8px; text-align:left; line-height:1.4;">
-            <div><b>Q Bill No :</b> <span style="color:#b30000; font-weight:bold;">Q-${billNo}</span></div>
-            <div><b>Payment Terms :</b> ${b.payment_mode || "Cash"}</div>
+            <div><b>${billNoLabel(b)} :</b> <span style="color:#b30000; font-weight:bold;">${billNoPrefix(b)}${billNo}</span></div>
+            <div><b>${payLabel(b)} :</b> ${payText(b)}</div>
             <div><b>Date :</b> ${dateStr}</div>
           </td>
         </tr>
@@ -516,7 +609,7 @@ function buildInvoice(b, targetId) {
             <td style="border:1px solid #000; padding:4px 8px; text-align:right; font-size:13px; color:#555; font-weight:normal;">${roundedAdd.toFixed(2)}</td>
           </tr>
           <tr>
-            <td colspan="3" style="border:1px solid #000; padding:4px 8px; text-align:right; font-weight:bold; font-size:14px;">Net Amount :</td>
+            <td colspan="3" style="border:1px solid #000; padding:4px 8px; text-align:right; font-weight:bold; font-size:14px;">${netLabel(b)} :</td>
             <!-- FINAL NET AMOUNT IN GREEN -->
             <td style="border:1px solid #000; padding:4px 8px; text-align:right; font-size:14px; color:#28a745; font-weight:bold;">${netAmount.toFixed(2)}</td>
           </tr>
@@ -601,14 +694,14 @@ table.main-tbl th{font-size:9.5pt;font-weight:bold;text-align:center;}
       <div class="shop-subtitle">PREMIUM SANITARYWARES & TILES</div>
     </div>
   </div>
-  <div class="bill-type">Q BILL</div>
+  <div class="bill-type">${billTitle(b)}</div>
   
   <table class="meta-box">
     <tr>
       <td style="width:52%;"><b>To :</b> <span class="red-txt">${custName}</span></td>
       <td style="width:48%;">
-        <b>Q Bill No :</b> <span class="red-txt">Q-${billNo}</span><br>
-        <b>Payment Terms :</b> ${b.payment_mode || "Cash"}<br>
+        <b>${billNoLabel(b)} :</b> <span class="red-txt">${billNoPrefix(b)}${billNo}</span><br>
+        <b>${payLabel(b)} :</b> ${payText(b)}<br>
         <b>Date :</b> ${dateStr}
       </td>
     </tr>
@@ -636,7 +729,7 @@ table.main-tbl th{font-size:9.5pt;font-weight:bold;text-align:center;}
         <td style="text-align:right;" class="grey-txt">${roundedAdd.toFixed(2)}</td>
       </tr>
       <tr>
-        <td colspan="3" style="text-align:right;font-weight:bold;font-size:10pt;">Net Amount :</td>
+        <td colspan="3" style="text-align:right;font-weight:bold;font-size:10pt;">${netLabel(b)} :</td>
         <!-- NET AMOUNT IN GREEN FOR PRINT -->
         <td style="text-align:right;font-size:10pt;" class="green-txt">${netAmount.toFixed(2)}</td>
       </tr>
@@ -692,6 +785,111 @@ async function sharePDF(){
     btn.innerText=orig;
     btn.disabled=false;
   }
+}
+
+// ── ALTER BILL ─────────────────────────────────────────
+function escAttr(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;"); }
+
+function buildAlterRows(b){
+  document.getElementById("alterBody").innerHTML="";
+  alterRowCount=0; deletedAlterIds=[];
+  (b.items||[]).forEach(item=>addAlterRowFromItem(item));
+  calcAlterTotal();
+}
+
+function addAlterRowFromItem(item){
+  alterRowCount++;
+  const id=alterRowCount;
+  const pname=item.product||item.product_name||"";
+  const iid=item.item_id!=null?item.item_id:"new";
+  const tr=document.createElement("tr");
+  tr.id="arow_"+id;
+  tr.innerHTML=`
+    <td>${id}</td>
+    <td><input id="arcode_${id}" value="${escAttr(item.product_code)}" placeholder="Code"
+      oninput="showProdDrop(this,${id},'code','alter')" onfocus="showProdDrop(this,${id},'code','alter')"
+      onkeydown="handleProdKey(event,${id},'code','alter')" autocomplete="off"></td>
+    <td><input id="arname_${id}" value="${escAttr(pname)}" placeholder="Name"
+      oninput="showProdDrop(this,${id},'name','alter')" onfocus="showProdDrop(this,${id},'name','alter')"
+      onkeydown="handleProdKey(event,${id},'name','alter')" autocomplete="off">
+      <div class="selected-tag" id="artag_${id}">${pname?"✅ "+escAttr(pname):""}</div>
+      <input type="hidden" id="arpid_${id}" value="${item.product_id||""}">
+      <input type="hidden" id="ariid_${id}" value="${iid}"></td>
+    <td><select id="arbatch_${id}" onchange="onAlterBatch(${id})"
+      onkeydown="if(event.key==='Enter'){event.preventDefault();document.getElementById('arqty_${id}').focus();}">
+      <option value="${item.batch_id||""}">${item.batch_id?"Current batch":"Select product first"}</option></select></td>
+    <td><input type="number" id="arqty_${id}" value="${item.quantity||1}" min="1" oninput="calcAlterRow(${id})"
+      onkeydown="if(event.key==='Enter'){event.preventDefault();document.getElementById('arrate_${id}').focus();}"></td>
+    <td><input type="number" id="arrate_${id}" value="${item.rate!=null?parseFloat(item.rate).toFixed(2):""}" oninput="calcAlterRow(${id})"
+      onkeydown="if(event.key==='Enter'){event.preventDefault();document.getElementById('aramt_${id}').focus();}"></td>
+    <td><input type="number" id="aramt_${id}" value="${item.total_amount!=null?parseFloat(item.total_amount).toFixed(2):""}" oninput="calcAlterTotal()"></td>
+    <td><button class="danger" onclick="delAlterRow(${id},'${iid}')" style="padding:3px 7px;font-size:11px;">✕</button></td>`;
+  document.getElementById("alterBody").appendChild(tr);
+  if(item.product_id) loadBatches("arbatch_"+id,item.product_id,item.batch_id);
+  calcAlterTotal();
+}
+
+function addAlterRow(){
+  addAlterRowFromItem({item_id:"new",product_id:"",product:"",product_code:"",batch_id:"",quantity:1,rate:null,total_amount:null});
+}
+
+function onAlterBatch(id){
+  const sel=document.getElementById("arbatch_"+id);
+  const opt=sel.options[sel.selectedIndex];
+  if(!opt||!opt.dataset.mrp) return;
+  document.getElementById("arrate_"+id).value=parseFloat(opt.dataset.mrp).toFixed(2);
+  calcAlterRow(id);
+}
+
+function calcAlterRow(id){
+  const q=parseFloat(document.getElementById("arqty_"+id).value)||0;
+  const r=parseFloat(document.getElementById("arrate_"+id).value)||0;
+  document.getElementById("aramt_"+id).value=(q*r).toFixed(2);
+  calcAlterTotal();
+}
+
+function delAlterRow(id,item_id){
+  if(item_id && item_id!=="new") deletedAlterIds.push(parseInt(item_id));
+  const el=document.getElementById("arow_"+id); if(el) el.remove();
+  calcAlterTotal();
+}
+
+function calcAlterTotal(){
+  let t=0;
+  for(let i=1;i<=alterRowCount;i++){ const el=document.getElementById("aramt_"+i); if(el) t+=parseFloat(el.value)||0; }
+  document.getElementById("alterTotal").innerText="New Total: ₹"+t.toFixed(2);
+}
+
+function showAlterSection(){
+  document.getElementById("alterSection").style.display="block";
+  document.getElementById("alterSection").scrollIntoView({behavior:"smooth"});
+}
+function hideAlterSection(){ document.getElementById("alterSection").style.display="none"; }
+
+function saveAlter(){
+  if(!currentBill) return;
+  const items=[];
+  for(let i=1;i<=alterRowCount;i++){
+    if(!document.getElementById("arow_"+i)) continue;
+    const iid=document.getElementById("ariid_"+i).value;
+    const pid=document.getElementById("arpid_"+i).value;
+    const bid=document.getElementById("arbatch_"+i).value;
+    const qty=parseInt(document.getElementById("arqty_"+i).value)||0;
+    const rate=parseFloat(document.getElementById("arrate_"+i).value)||0;
+    const amt=parseFloat(document.getElementById("aramt_"+i).value)||0;
+    if(!pid){ alert("Row "+i+": search and select a product"); return; }
+    if(qty<=0||rate<=0){ alert("Row "+i+": enter a quantity and rate (use ✕ to remove a row)"); return; }
+    items.push({item_id:(iid&&iid!=="new"&&!isNaN(parseInt(iid)))?parseInt(iid):"new",product_id:parseInt(pid),batch_id:bid?parseInt(bid):null,quantity:qty,rate,total_amount:amt});
+  }
+  if(!items.length){ alert("A bill needs at least one item. Use Cancel Bill in Find Bill to cancel the whole bill."); return; }
+  fetch(API+"/alter-bill/"+currentBill.bill_no,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({items,deleted_item_ids:deletedAlterIds})})
+  .then(r=>r.json()).then(d=>{
+    if(d.error){ alert("Error: "+d.error); return; }
+    alert("✅ Bill updated! New total: ₹"+d.new_total.toFixed(2));
+    deletedAlterIds=[];
+    showInvoice(currentBill.bill_no);
+    loadBillStats();
+  }).catch(err=>alert("Network error: "+err.message));
 }
 
 function newBill(){

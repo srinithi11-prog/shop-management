@@ -214,7 +214,7 @@ function loadSalesByDate(){
            <td style="color:${profitColor};font-size:12px;">${pct}%</td>`
         : "";
       return `<tr>
-        <td style="font-weight:bold;">Q-${b.bill_id}</td>
+        <td style="font-weight:bold;">${b.bill_type==="RETURN"?"R-":"Q-"}${b.bill_id}${b.bill_type==="RETURN"?' <span style="background:#dc3545;color:#fff;font-size:10px;padding:1px 6px;border-radius:8px;">RETURN</span>':(b.bill_type==="WHOLESALE"?' <span style="background:#6f42c1;color:#fff;font-size:10px;padding:1px 6px;border-radius:8px;">WHOLESALE</span>':"")}</td>
         <td style="text-align:left;">${b.customer_name}</td>
         <td>${b.payment_mode||"-"}</td>
         <td style="font-weight:bold;">₹${sale.toFixed(2)}</td>
@@ -458,7 +458,7 @@ function setActiveFY(id){
 function askProfitPassword(){
   const pwd=prompt("Enter profit password:");
   if(pwd===null)return;
-  if(pwd==="3363"){revealProfit();}
+  if(pwd==="1234"){revealProfit();}
   else{alert("❌ Incorrect password");}
 }
 
